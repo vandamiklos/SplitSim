@@ -47,7 +47,7 @@ def main(output=sys.stderr):
 
 
 def parse_args(args):
-    parser = MyParser(description=bold('Badread: a long read simulator that can imitate many'
+    parser = MyParser(description=bold('BadreadAmplicon: a long read amplicon simulator that can imitate many'
                                        'types of read problems'),
                       formatter_class=MyHelpFormatter, add_help=False)
 

@@ -195,6 +195,9 @@ def get_real_fragment(fragment_length, ref_seqs, rev_comp_ref_seqs, ref_contigs,
         seq = rev_comp_ref_seqs[contig]
         info.append('-strand')
 
+    # NOTE reset fragment lengths here:
+    fragment_length = len(seq)
+
     # If the reference contig is linear and the fragment length is long enough, then we just
     # return the entire fragment, start to end.
     if fragment_length >= len(seq) and not ref_circular[contig]:

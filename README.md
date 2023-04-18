@@ -1,5 +1,18 @@
-<p align="center"><picture><source srcset="images/logo-dark.png" media="(prefers-color-scheme: dark)"><img src="images/logo.png" alt="Badread" width="75%"></picture></p>
 
+BadreadAmplicon
+===============
+
+This is a fork of Badread that ONLY simulates amplicon data.
+
+
+The only difference is that the ``--reference`` argument now refers to a fasta file with your target amplicon sequence(s). Additionally,
+reads the entire length of the amplicon are simulated, rather than generating partial sequences.
+
+All other input arguments are the same as for Badread.
+
+Documentation for Badread:
+--------------------------
+ 
 Badread is a long-read simulator tool that makes – you guessed it – bad reads! It can imitate many kinds of problems one might encounter in real long-read sets: chimeras, low-quality regions, systematic basecalling errors and more.
 
 Badread does not try to be best at imitating real reads (though it's not too bad, see [this comparison between Badread and other long-read simulators](comparison)). Rather, it was intended to give users _control_ over the quality of its simulated reads. I made Badread for the purpose of testing tools which take long reads as input. With it, one can increase the rate of different types of read problems, to see what effect it has.

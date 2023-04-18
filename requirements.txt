@@ -2,3 +2,4 @@ edlib
 numpy
 matplotlib
 scipy
+click
