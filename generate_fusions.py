@@ -39,9 +39,8 @@ def read_fasta(args):
     return fasta
 
 
-def generate_insertions(args, ref, fasta, n_seqs):
+def generate_insertions(args, ref, fasta, n_seqs, frag_lengths):
     rev_comps = {k: misc.reverse_complement(a) for k, a in fasta.items()}
-    frag_lengths = fragment_lengths.FragmentLengths(args['mean_ins_len'], args['std_ins_len'])
     chroms = list(ref.references)
     # make head to head fusion with some more fragments in between
     keys = list(fasta.keys())
@@ -59,7 +58,7 @@ def generate_insertions(args, ref, fasta, n_seqs):
 
         print("Insertion number", blocks, file=stderr)
         ins_seqs = []
-        tname = f"{t}:0-{len(a)}"
+        tname = f"insertion_{t}:0-{len(a)}"
         names = [">" + tname]
         blk = 0
         while blk < blocks:
@@ -81,19 +80,40 @@ def generate_insertions(args, ref, fasta, n_seqs):
         print(final_seq)
 
 
+def generate_deletions(fasta, n_seqs, frag_lengths):
+    rev_comps = {k: misc.reverse_complement(a) for k, a in fasta.items()}
+    # make head to head fusion with one fragment with a deletion
+    keys = list(fasta.keys())
+    for n in range(n_seqs):
+        t = random.choice(keys)
+        a = fasta[t].upper()
+        b = rev_comps[t]
+        left_hand_side = random.random() > 0.5
+        if left_hand_side:
+            flen = max(15, len(a) - frag_lengths.get_fragment_length())
+            print(f">deletion_{t}:0-{flen}_{t}:0-{len(b)}")
+            print(a[0:flen] + b)
+        else:
+            flen = max(15, len(b) - frag_lengths.get_fragment_length())
+            print(f">deletion_{t}:0-{len(a)}_{t}:0-{flen}")
+            print(a + b[flen:])
+
+
 @click.command()
 @click.argument('reference')
 @click.argument('fasta')
 @click.argument('number', type=int)
 @click.option("--mu-ins", help="insertion number mean (poisson distribution)", default=3, show_default=True, type=int)
-@click.option("--mean-ins-len", help="insertion length mean (gamma distribution)", default=150, show_default=True, type=int)
-@click.option("--std-ins-len", help="insertion length stdev (gamma distribution)", default=150, show_default=True, type=int)
+@click.option("--mean-block-len", help="insertion length mean (gamma distribution)", default=150, show_default=True, type=int)
+@click.option("--std-block-len", help="insertion length stdev (gamma distribution)", default=150, show_default=True, type=int)
 @click.version_option(__version__)
 def generate_fusions(**args):
     ref = pysam.FastaFile(args['reference'])
     fasta = read_fasta(args)
-    print(f"Generating {args['number']} fusions with insertions", file=stderr)
-    generate_insertions(args, ref, fasta, args['number'])
+    print(f"Generating {args['number']} fusions with insertions, and {args['number']} fusions with deletions", file=stderr)
+    frag_lengths = fragment_lengths.FragmentLengths(args['mean_block_len'], args['std_block_len'])
+    generate_insertions(args, ref, fasta, args['number'], frag_lengths)
+    generate_deletions(fasta, args['number'], frag_lengths)
     print(f"Done", file=stderr)
 
 
