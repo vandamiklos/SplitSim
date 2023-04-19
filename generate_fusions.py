@@ -24,16 +24,14 @@ from scipy.stats import poisson
 from sys import stderr
 
 
-__version__ = 0.1
+__version__ = '0.1'
 
 
 def read_fasta(args):
     fasta = {}
-    with misc.get_open_func(args['fasta'])(args['fasta'], 'r') as fin:
-        for line in fin:
-            name = line.strip()[1:]
-            seq = next(fin).strip()
-            fasta[name] = seq
+    fin = pysam.FastxFile(args['fasta'])
+    for line in fin:
+        fasta[line.name] = line.sequence
     if len(fasta) == 0:
         raise ValueError("Empty fasta file")
     return fasta
@@ -42,7 +40,7 @@ def read_fasta(args):
 def generate_insertions(args, ref, fasta, n_seqs, frag_lengths):
     rev_comps = {k: misc.reverse_complement(a) for k, a in fasta.items()}
     chroms = list(ref.references)
-    # make head to head fusion with some more fragments in between
+    # make head-to-head fusion with some more fragments in between
     keys = list(fasta.keys())
     for n in range(n_seqs):
         t = random.choice(keys)
@@ -82,21 +80,23 @@ def generate_insertions(args, ref, fasta, n_seqs, frag_lengths):
 
 def generate_deletions(fasta, n_seqs, frag_lengths):
     rev_comps = {k: misc.reverse_complement(a) for k, a in fasta.items()}
-    # make head to head fusion with one fragment with a deletion
+    # make head-to-head fusion with one fragment with a deletion
     keys = list(fasta.keys())
     for n in range(n_seqs):
         t = random.choice(keys)
         a = fasta[t].upper()
         b = rev_comps[t]
         left_hand_side = random.random() > 0.5
+        l = frag_lengths.get_fragment_length()
         if left_hand_side:
-            flen = max(15, len(a) - frag_lengths.get_fragment_length())
+            flen = max(15, len(a) - l)
             print(f">deletion_{t}:0-{flen}_{t}:0-{len(b)}")
             print(a[0:flen] + b)
         else:
             flen = max(15, len(b) - frag_lengths.get_fragment_length())
             print(f">deletion_{t}:0-{len(a)}_{t}:0-{flen}")
             print(a + b[flen:])
+        print(f"deletion {'left' if left_hand_side else 'right'} {l}", file=stderr)
 
 
 @click.command()
