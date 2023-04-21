@@ -54,10 +54,10 @@ def generate_insertions(args, ref, fasta, n_seqs, frag_lengths):
             if not blocks:
                 continue
 
-        print("Insertion number", blocks, file=stderr)
+        # print("Insertion number", blocks, file=stderr)
         ins_seqs = []
-        tname = f"insertion_{t}:0-{len(a)}"
-        names = [">" + tname]
+        tname = f"{t}:0-{len(a)}"
+        names = [f">insertion_{blocks}__" + tname]
         blk = 0
         while blk < blocks:
             flen = frag_lengths.get_fragment_length()
@@ -68,7 +68,7 @@ def generate_insertions(args, ref, fasta, n_seqs, frag_lengths):
             if pos + flen > ref.get_reference_length(c):
                 continue  # happens rarely
             blk += 1
-            print("    len", flen, file=stderr)
+            # print("    len", flen, file=stderr)
             ins_seqs.append(ref.fetch(c, pos, pos + flen).upper())
             names.append(f"{c}:{pos}-{pos+flen}")
         final_seq = a + "".join(ins_seqs) + b
@@ -110,10 +110,10 @@ def generate_deletions(fasta, n_seqs, frag_lengths):
 def generate_fusions(**args):
     ref = pysam.FastaFile(args['reference'])
     fasta = read_fasta(args)
-    print(f"Generating {args['number']} fusions with insertions, and {args['number']} fusions with deletions", file=stderr)
+    print(f"Generating {args['number']} fusions with insertions", file=stderr)
     frag_lengths = fragment_lengths.FragmentLengths(args['mean_block_len'], args['std_block_len'])
     generate_insertions(args, ref, fasta, args['number'], frag_lengths)
-    generate_deletions(fasta, args['number'], frag_lengths)
+    # generate_deletions(fasta, args['number'], frag_lengths)
     print(f"Done", file=stderr)
 
 

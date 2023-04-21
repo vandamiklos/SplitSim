@@ -70,9 +70,9 @@ def simulate(args, output=sys.stderr):
         if len(seq) == 0:
             continue
 
-        info.append(f'length={len(seq)}')
-        info.append(f'error-free_length={len(fragment)}')
-        info.append(f'read_identity={actual_identity * 100.0:.2f}%')
+        # info.append(f'length={len(seq)}')
+        # info.append(f'error-free_length={len(fragment)}')
+        info.append(f'i={actual_identity * 100.0:.2f}%')
 
         read_name = uuid.UUID(int=random.getrandbits(128))
         info = ' '.join(info)
@@ -190,10 +190,10 @@ def get_real_fragment(fragment_length, ref_seqs, rev_comp_ref_seqs, ref_contigs,
     info = [contig]
     if random_chance(0.5):
         seq = ref_seqs[contig]
-        info.append('+strand')
+        # info.append('+strand')
     else:
         seq = rev_comp_ref_seqs[contig]
-        info.append('-strand')
+        # info.append('-strand')
 
     # NOTE reset fragment lengths here:
     fragment_length = len(seq)
@@ -201,7 +201,7 @@ def get_real_fragment(fragment_length, ref_seqs, rev_comp_ref_seqs, ref_contigs,
     # If the reference contig is linear and the fragment length is long enough, then we just
     # return the entire fragment, start to end.
     if fragment_length >= len(seq) and not ref_circular[contig]:
-        info.append('0-' + str(len(seq)))
+        # info.append('0-' + str(len(seq)))
         return seq, info
 
     # If the reference contig is circular and the fragment length is too long, then we fail to get
@@ -212,7 +212,7 @@ def get_real_fragment(fragment_length, ref_seqs, rev_comp_ref_seqs, ref_contigs,
     start_pos = random.randint(0, len(seq)-1)
     end_pos = start_pos + fragment_length
 
-    info.append(f'{start_pos}-{end_pos}')
+    # info.append(f'{start_pos}-{end_pos}')
 
     # For circular contigs, we may have to loop the read around the contig.
     if ref_circular[contig]:
