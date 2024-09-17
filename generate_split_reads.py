@@ -19,21 +19,19 @@ def read_fasta(args):
     return fasta
 
 
-def generate_split_reads(args, ref, n_seqs, frag_lengths):
+def generate_split_reads(args, ref, n_seqs, mean, frag_lengths):
     chroms = list(ref.references)
-    strand = [pos, neg]
+    strand = ['forward', 'reverse']
     for n in range(n_seqs):
-        if args["mu_ins"] == 0:
-            raise ValueError("mu-ins must be > 0")
+        if mean == 0:
+            raise ValueError("mean must be > 0")
         blocks = 0
         while not blocks:
-            blocks = poisson.rvs(mu=args["mu_ins"], size=1)[0]
+            blocks = poisson.rvs(mu=mean, size=1)[0]
             if not blocks:
                 continue
-
-        # print("Insertion number", blocks, file=stderr)
         ins_seqs = []
-        names = [f">insertion_{blocks}__"]
+        names = [f">split_{blocks}__"]
         blk = 0
         while blk < blocks:
             flen = frag_lengths.get_fragment_length()
@@ -45,9 +43,10 @@ def generate_split_reads(args, ref, n_seqs, frag_lengths):
             if pos + flen > ref.get_reference_length(c):
                 continue  # happens rarely
             blk += 1
-            # print("    len", flen, file=stderr)
-            # forward or reverse strand
-            ins_seqs.append(ref.fetch(c, pos, pos + flen).upper())
+            seq = ref.fetch(c, pos, pos + flen).upper()
+            if s == 'reverse':
+                seq = pysam.reverse_complement(seq)
+            ins_seqs.append(seq)
             names.append(f"{c}:{pos}-{pos+flen}")
         final_seq = "".join(ins_seqs)
         final_name = "_".join(names)
@@ -65,7 +64,7 @@ def generate_reads(**args):
     ref = pysam.FastaFile(args['reference'])
     print(f"Generating {args['number']} split-reads", file=stderr)
     frag_lengths = fragment_lengths.FragmentLengths(args['mean_block_len'], args['std_block_len'])
-    generate_split_reads(args, args['number'], frag_lengths)
+    generate_split_reads(args, ref, args['number'], args['mean'], frag_lengths)
     print(f"Done", file=stderr)
 
 

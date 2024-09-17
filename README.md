@@ -1,14 +1,7 @@
+SplitReadSimulator
 
-BadreadAmplicon
-===============
+This is a fork of BadreadAmplicon. It generates split-reads for the testing of long-read aligners.
 
-This is a fork of Badread that ONLY simulates amplicon data.
-
-
-The only difference is that the ``--reference`` argument now refers to a fasta file with your target amplicon sequence(s). Additionally,
-reads the entire length of the amplicon are simulated, rather than generating partial sequences.
-
-All other input arguments are the same as for Badread.
 
 Documentation for Badread:
 --------------------------
