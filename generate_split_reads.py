@@ -31,7 +31,7 @@ def generate_split_reads(args, ref, n_seqs, mean, frag_lengths):
             if not blocks:
                 continue
         ins_seqs = []
-        names = [f">split_{blocks}__"]
+        names = [f">alignments_{blocks}_"]
         blk = 0
         while blk < blocks:
             flen = frag_lengths.get_fragment_length()
@@ -45,7 +45,7 @@ def generate_split_reads(args, ref, n_seqs, mean, frag_lengths):
             blk += 1
             seq = ref.fetch(c, pos, pos + flen).upper()
             if s == 'reverse':
-                seq = pysam.reverse_complement(seq)
+                seq = misc.reverse_complement(seq)
             ins_seqs.append(seq)
             names.append(f"{c}:{pos}-{pos+flen}")
         final_seq = "".join(ins_seqs)
