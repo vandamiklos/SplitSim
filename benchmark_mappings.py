@@ -1,4 +1,3 @@
-import sys
 from sys import stderr
 import pandas as pd
 import numpy as np
@@ -85,8 +84,20 @@ def analyse_ins_numbers(df, ins_events, prefix):
             continue
         axes[i].set_title(f'Expected alignments = {u[i]}')
         sns.histplot(dd, x='mapped', ax=axes[i], discrete=True)
+        axes[i].axvline(x=u[i], ls='--', color='r')
     plt.tight_layout()
     plt.savefig(prefix + 'mappings_vs_expected.pdf')
+    plt.close()
+
+    scale = 10
+    min_expect = d['expected'].min()
+    line = {'expected': range(min_expect, max_expect), 'mapped': range(min_expect, max_expect)}
+    counts = d.groupby(['expected', 'mapped']).size().reset_index(name='size')
+    counts['size'] = counts['size'] * scale
+    plt.scatter(data=counts, x='expected', y='mapped', alpha=0.8, s='size', linewidths=0)
+    plt.plot(line['expected'], line['mapped'], color='r', alpha=0.5, ls='--')
+    plt.tight_layout()
+    plt.savefig(prefix + 'mappings_vs_expected_scatter.pdf')
     plt.close()
 
     def match_func(block_A, block_B):
@@ -216,6 +227,7 @@ if __name__ == '__main__':
 
     table = pd.read_csv(args.query, sep='\t')
     table = table.loc[table['is_secondary'] != 1]
+    table = table.drop_duplicates()
     table.reset_index(drop=True, inplace=True)
 
     prefix = args.prefix
