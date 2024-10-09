@@ -4,6 +4,7 @@ import numpy as np
 import pysam
 import matplotlib.pyplot as plt
 import seaborn as sns
+import click
 
 """
 inputs
@@ -207,37 +208,34 @@ def analyse_ins_numbers(df, ins_events, prefix):
         bin_id.append(bid)
 
     plt.plot(bin_id, bin_precison)
-    plt.scatter(bin_id, bin_precison, s=s, alpha=0.25)
+    plt.scatter(bin_id, bin_precison, s=s, alpha=0.5)
     # plt.xlim(0, 2000)
     plt.xlabel('MapQ')
     plt.ylabel('Precision')
     plt.ylim(0, 1.1)
     plt.tight_layout()
     plt.savefig(prefix + 'mapq_vs_precision.pdf')
+    plt.close()
+
+    # cummulative graph?
+    # wrong/total - ins size
+    bin_wrong = []
+    bin_w = []
+    wrong = 0
+    for bid, b in d.groupby('bins'):
+        bin_wrong.append(wrong / len(d))
+        bin_w.append(bid)
+        wrong += len(b) - b['tp'].sum()
 
 
-if __name__ == '__main__':
-    import argparse
+    plt.plot(bin_w, bin_wrong)
+    plt.xlabel('Alignment size')
+    plt.ylabel('Wrong %')
+    plt.tight_layout()
+    plt.savefig(prefix + 'ins_size_vs_wrong.pdf')
+    plt.close()
 
-    parse = argparse.ArgumentParser()
-    parse.add_argument('--query', help='query mappings table to assess from fslr.collect_mapping_info.py (bed file)')
-    parse.add_argument('--target', help='target mappings to assess from BadreadAmplicon generate_fusions.py (fastq file)')
-    parse.add_argument('--prefix', help='prefix for output files')
-    args = parse.parse_args()
-
-    table = pd.read_csv(args.query, sep='\t')
-    table = table.loc[table['is_secondary'] != 1]
-    table = table.drop_duplicates()
-    table.reset_index(drop=True, inplace=True)
-
-    prefix = args.prefix
-    if prefix[-1] != '.':
-        prefix += '.'
-
-    print(f'Loaded {len(table)} mappings', file=stderr)
-
-    ins_events = load_frag_info(args.target)
-
+def expected_mappings_per_read(prefix, ins_events):
     expect = []
     for i in ins_events.values():
         expect += [j[2] - j[1] for j in i.get_ins_blocks()]
@@ -255,4 +253,20 @@ if __name__ == '__main__':
     plt.savefig(prefix + 'expected_mappings_per_read.pdf')
     plt.close()
 
+
+def benchmark_mappings(args):
+    table = pd.read_csv(args.query, sep='\t')
+    table = table.loc[table['is_secondary'] != 1]
+    table = table.drop_duplicates()
+    table.reset_index(drop=True, inplace=True)
+
+    prefix = args.prefix
+    if prefix[-1] != '.':
+        prefix += '.'
+    prefix = "/".join([args.out, prefix])
+
+    print(f'Loaded {len(table)} mappings', file=stderr)
+
+    ins_events = load_frag_info(args.target)
+    expected_mappings_per_read(prefix, ins_events)
     analyse_ins_numbers(table, ins_events, prefix)

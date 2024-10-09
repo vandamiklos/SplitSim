@@ -1,6 +1,7 @@
 import pysam
 import pandas as pd
 from collections import defaultdict
+import click
 
 def get_query_pos_from_cigartuples(r):
     # Infer the position on the query sequence of the alignment using cigar string
@@ -122,14 +123,9 @@ def mapping_info(f, outf):
             'is_supplementary']
 
     df = df[cols]
-    df.to_csv(outf, index=False, sep="\t")
+    df.to_csv(f"{outf}.bed", index=False, sep="\t")
 
 
-if __name__ == '__main__':
-    import argparse
-    parse = argparse.ArgumentParser()
-    parse.add_argument('--bam', help='bam file to assess')
-    parse.add_argument('--out', help='out put bed file')
-    args = parse.parse_args()
+def collect_mapping_info(args):
     mapping_info(args.bam, args.out)
     print('Done')

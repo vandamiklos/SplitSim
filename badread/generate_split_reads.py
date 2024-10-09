@@ -1,17 +1,13 @@
-import click
+import sys
 import random
 from badread import misc, fragment_lengths
 import pysam
 from scipy.stats import poisson
-from sys import stderr
-
-
-__version__ = '0.1'
 
 
 def read_fasta(args):
     fasta = {}
-    fin = pysam.FastxFile(args['fasta'])
+    fin = pysam.FastxFile(args.fasta)
     for line in fin:
         fasta[line.name] = line.sequence
     if len(fasta) == 0:
@@ -53,20 +49,13 @@ def generate_split_reads(args, ref, n_seqs, mean, frag_lengths):
         print(final_name)
         print(final_seq)
 
-@click.command()
-@click.argument('reference')
-@click.argument('number', type=int)
-@click.option("--mean", help="alignment number mean (poisson distribution)", default=3, show_default=True, type=int)
-@click.option("--mean-block-len", help="alignment length mean (gamma distribution)", default=150, show_default=True, type=int)
-@click.option("--std-block-len", help="alignment length stdev (gamma distribution)", default=150, show_default=True, type=int)
-@click.version_option(__version__)
-def generate_reads(**args):
-    ref = pysam.FastaFile(args['reference'])
-    print(f"Generating {args['number']} split-reads", file=stderr)
-    frag_lengths = fragment_lengths.FragmentLengths(args['mean_block_len'], args['std_block_len'])
-    generate_split_reads(args, ref, args['number'], args['mean'], frag_lengths)
-    print(f"Done", file=stderr)
 
+def generate_reads(args):
+    ref = pysam.FastaFile(args.reference)
 
-if __name__ == "__main__":
-    generate_reads()
+    print(f"Generating {args.number} split-reads", file=sys.stderr)
+
+    frag_lengths = fragment_lengths.FragmentLengths(args.mean_block_len, args.std_block_len)
+    generate_split_reads(args, ref, args.number, args.mean, frag_lengths)
+
+    print(f"Done", file=sys.stderr)

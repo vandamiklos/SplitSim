@@ -78,19 +78,20 @@ class BadreadInstall(install):
                             os.path.join(qscore_models_dest_dir, 'pacbio2016.gz'))
 
 
-setup(name='BadreadAmplicon',
+setup(name='SplitReadSimulator',
       version=__version__,
-      description='BadreadAmplicon: a long read amplicon simulator that can mimic various kinds of read problems',
+      description='SplitReadSimulator: a split-read simulator for long reads that can mimic various kinds of read '
+                  'problems',
       long_description=readme(),
       long_description_content_type='text/markdown',
       url='https://github.com/rrwick/Badread',
-      author='Kez Cleal, Ryan Wick',
-      author_email='clealk@cardiff.ac.uk',
+      author='Vanda Miklos, Kez Cleal, Ryan Wick',
+      author_email='miklosv@cardiff.ac.uk, clealk@cardiff.ac.uk',
       license='GPLv3',
       packages=['badread'],
       install_requires=['edlib', 'numpy', 'scipy'],
       extras_require={'plot': ['matplotlib']},
-      entry_points={"console_scripts": ['badreadamplicon = badread.__main__:main']},
+      entry_points={"console_scripts": ['splitreadsimulator = badread.__main__:main']},
       include_package_data=True,
       zip_safe=False,
       python_requires='>=3.6',

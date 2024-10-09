@@ -45,10 +45,22 @@ def main(output=sys.stderr):
         from .plot_window_identity import plot_window_identity
         plot_window_identity(args)
 
+    elif args.subparser_name == 'generate_split_reads':
+        from .generate_split_reads import generate_reads
+        generate_reads(args)
+
+    elif args.subparser_name == 'collect_mapping_info':
+        from .collect_mapping_info import collect_mapping_info
+        collect_mapping_info(args)
+
+    elif args.subparser_name == 'benchmark_mappings':
+        from .benchmark_mappings import benchmark_mappings
+        benchmark_mappings(args)
+
 
 def parse_args(args):
-    parser = MyParser(description=bold('BadreadAmplicon: a long read amplicon simulator that can imitate many'
-                                       'types of read problems'),
+    parser = MyParser(description=bold('SplitReadSimulator: a split-read simulator that can imitate many'
+                                       'types of read problems of long reads'),
                       formatter_class=MyHelpFormatter, add_help=False)
 
     subparsers = parser.add_subparsers(title='Commands', dest='subparser_name')
@@ -56,6 +68,10 @@ def parse_args(args):
     error_model_subparser(subparsers)
     qscore_model_subparser(subparsers)
     plot_subparser(subparsers)
+    generate_split_reads_subparser(subparsers)
+    collect_mapping_info_subparser(subparsers)
+    benchmark_mappings_subparser(subparsers)
+
 
     longest_choice_name = max(len(c) for c in subparsers.choices)
     subparsers.help = 'R|'
@@ -233,6 +249,65 @@ def plot_subparser(subparsers):
                             help='Show this help message and exit')
     other_args.add_argument('--version', action='version', version='Badread v' + __version__,
                             help="Show program's version number and exit")
+
+
+def generate_split_reads_subparser(subparsers):
+    group = subparsers.add_parser('generate_split_reads', description='Generate split-reads',
+                                  formatter_class=MyHelpFormatter, add_help=False)
+
+    required_args = group.add_argument_group('Required arguments')
+    required_args.add_argument('--reference', type=str, required=True,
+                               help='Reference FASTA file')
+    required_args.add_argument('--number', type=int, required=True,
+                               help='Number of different split-reads to generate')
+    required_args.add_argument("--mean", help='alignment number mean (poisson distribution), '
+                                             'default: DEFAULT)',
+                               default=3, type=int)
+
+    sim_args = group.add_argument_group('Options',
+                                        description='Length distribution parameters of the blocks')
+    sim_args.add_argument('--mean-block-len', type=int, default='150',
+                          help='Block length mean (gamma distribution), '
+                               'default: DEFAULT)')
+    sim_args.add_argument('--std-block-len', type=int, default='150',
+                          help='Block length stdev (gamma distribution), '
+                               'default: DEFAULT)')
+
+    other_args = group.add_argument_group('Other')
+    other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
+                            help='Show this help message and exit')
+
+
+def collect_mapping_info_subparser(subparsers):
+    group = subparsers.add_parser('collect_mapping_info', description='Collect mapping information from BAM file',
+                                  formatter_class=MyHelpFormatter, add_help=False)
+
+    required_args = group.add_argument_group('Required arguments')
+    required_args.add_argument('--bam', type=str, required=True,
+                               help='Path to the BAM file to assess')
+    required_args.add_argument('--out', type=str, required=True,
+                               help='Output path')
+
+    other_args = group.add_argument_group('Other')
+    other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
+                            help='Show this help message and exit')
+
+
+def benchmark_mappings_subparser(subparsers):
+    group = subparsers.add_parser('benchmark_mappings', description='Benchmark mappings from BED file',
+                                  formatter_class=MyHelpFormatter, add_help=False)
+
+    required_args = group.add_argument_group('Required arguments')
+    required_args.add_argument('--query', type=str, required=True,
+                               help='Query mappings table to assess from collect_mapping_info (BED file)')
+    required_args.add_argument('--target', type=str, required=True,
+                               help='Target mappings to assess from generate_split_reads (FASTQ file)')
+    required_args.add_argument("--out", help="Output path")
+    required_args.add_argument("--prefix", help="Prefix for output files", type=str)
+
+    other_args = group.add_argument_group('Other')
+    other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
+                            help='Show this help message and exit')
 
 
 def check_simulate_args(args):
