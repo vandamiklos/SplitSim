@@ -4,7 +4,6 @@ import numpy as np
 import pysam
 import matplotlib.pyplot as plt
 import seaborn as sns
-import click
 
 """
 inputs
@@ -17,9 +16,9 @@ outputs
 -------
 graphs showing:
  numbers of mappings vs expected mappings
- histogram of ins sizes
+ histogram of alignment sizes
  summary report with overall precision and recall of mappings
- scatter plot of insertion size vs mapping precision
+ scatter plot of alignment size vs mapping precision
 
 """
 
@@ -153,12 +152,12 @@ def analyse_ins_numbers(df, ins_events, prefix):
     assert (len(d) == df_res['tp'].sum() + df_res['fp'].sum())
     prec = round(df_res['tp'].sum() / (df_res['tp'].sum() + df_res['fp'].sum()), 4)
     recall = round(df_res['tp'].sum() / (df_res['tp'].sum() + df_res['fn'].sum()), 4)
-    print('Precision:', prec)
-    print('Recall:', recall)
+    f = round(2 * df_res['tp'].sum() / (2 * df_res['tp'].sum() + df_res['fn'].sum()), 4)
+
 
     with open(prefix + 'stats.txt', 'w') as st:
-        st.write('precision\trecall\tn\n')
-        st.write(f'{prec}\t{recall}\t{len(d)}\n')
+        st.write('precision\trecall\tf-score\tn\n')
+        st.write(f'{prec}\t{recall}\t{f}\t{len(d)}\n')
     d.to_csv(prefix + 'mappings_labelled.csv', sep='\t', index=False)
 
     # assess mapping accuracy by alignment length
@@ -202,7 +201,6 @@ def analyse_ins_numbers(df, ins_events, prefix):
     bin_id = []
     s = []
     for bid, b in d.groupby('mapq'):
-        print('mapq', bid, 'mappings', len(b), 'tp', b['tp'].sum(), 'fp', b['fp'].sum())
         s.append(len(b))
         bin_precison.append(b['tp'].sum() / (b['tp'].sum() + b['fp'].sum()))
         bin_id.append(bid)
@@ -216,6 +214,7 @@ def analyse_ins_numbers(df, ins_events, prefix):
     plt.tight_layout()
     plt.savefig(prefix + 'mapq_vs_precision.pdf')
     plt.close()
+
 
     # cummulative graph?
     # wrong/total - ins size
@@ -232,7 +231,7 @@ def analyse_ins_numbers(df, ins_events, prefix):
     plt.xlabel('Alignment size')
     plt.ylabel('Wrong %')
     plt.tight_layout()
-    plt.savefig(prefix + 'ins_size_vs_wrong.pdf')
+    plt.savefig(prefix + 'aln_size_vs_wrong.pdf')
     plt.close()
 
 def expected_mappings_per_read(prefix, ins_events):
@@ -241,14 +240,14 @@ def expected_mappings_per_read(prefix, ins_events):
         expect += [j[2] - j[1] for j in i.get_ins_blocks()]
     plt.hist(expect, bins=np.arange(0, 800, 25))
     plt.ylabel('count')
-    plt.xlabel('ins length')
+    plt.xlabel('aln size')
     plt.tight_layout()
     plt.savefig(prefix + 'expected_mappings_sizes.pdf')
     plt.close()
 
     plt.hist([len(i.get_ins_blocks()) for i in ins_events.values()], bins=range(0, 15))
     plt.ylabel('count')
-    plt.xlabel('ins length')
+    plt.xlabel('aln size')
     plt.tight_layout()
     plt.savefig(prefix + 'expected_mappings_per_read.pdf')
     plt.close()
@@ -256,17 +255,26 @@ def expected_mappings_per_read(prefix, ins_events):
 
 def benchmark_mappings(args):
     table = pd.read_csv(args.query, sep='\t')
-    table = table.loc[table['is_secondary'] != 1]
-    table = table.drop_duplicates()
-    table.reset_index(drop=True, inplace=True)
+    table1 = table.loc[table['is_secondary'] != 1]
+    table1 = table1.drop_duplicates()
+    table1.reset_index(drop=True, inplace=True)
+
+    prefix1 = args.prefix
+    if prefix1[-1] != '.':
+        prefix1 += '.'
+    prefix1 = "/".join([args.out, prefix1])
 
     prefix = args.prefix
     if prefix[-1] != '.':
         prefix += '.'
+    prefix = ".".join(['secondary', prefix])
     prefix = "/".join([args.out, prefix])
+
+
 
     print(f'Loaded {len(table)} mappings', file=stderr)
 
     ins_events = load_frag_info(args.target)
     expected_mappings_per_read(prefix, ins_events)
+    analyse_ins_numbers(table1, ins_events, prefix1)
     analyse_ins_numbers(table, ins_events, prefix)

@@ -1,6 +1,9 @@
 SplitReadSimulator
+------------------
 
 This is a fork of BadreadAmplicon. It generates split-reads for the testing of long-read aligners.
+
+### Usage:
 
 
 Documentation for Badread:

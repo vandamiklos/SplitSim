@@ -77,7 +77,7 @@ def mapping_info(f, outf):
                  'qlen': qlen,
                  'aln_size': qend - qstart,
                  'mapq': a.mapq,
-                 'alignment_score': a.get_tag('AS'),
+                 'alignment_score': (0 if 'AS' not in a.get_tags() else a.get_tag('AS')),
                  'seq': seq if pri else '',
                  'is_secondary': sec,
                  'is_supplementary': sup,
