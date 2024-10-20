@@ -255,26 +255,15 @@ def expected_mappings_per_read(prefix, ins_events):
 
 def benchmark_mappings(args):
     table = pd.read_csv(args.query, sep='\t')
-    table1 = table.loc[table['is_secondary'] != 1]
-    table1 = table1.drop_duplicates()
-    table1.reset_index(drop=True, inplace=True)
-
-    prefix1 = args.prefix
-    if prefix1[-1] != '.':
-        prefix1 += '.'
-    prefix1 = "/".join([args.out, prefix1])
+    table = table.loc[table['is_secondary'] != 1]
+    table = table.drop_duplicates()
+    table.reset_index(drop=True, inplace=True)
 
     prefix = args.prefix
     if prefix[-1] != '.':
         prefix += '.'
-    prefix = ".".join(['secondary', prefix])
     prefix = "/".join([args.out, prefix])
-
-
-
-    print(f'Loaded {len(table)} mappings', file=stderr)
 
     ins_events = load_frag_info(args.target)
     expected_mappings_per_read(prefix, ins_events)
-    analyse_ins_numbers(table1, ins_events, prefix1)
     analyse_ins_numbers(table, ins_events, prefix)

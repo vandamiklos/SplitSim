@@ -24,13 +24,13 @@ args = parse.parse_args()
 
 ###################### BWA
 if args.bwa:
-    bwa = "bwa mem -t {threads} {ref} {input} | "\
+    bwa = "(bwa mem -t {threads} {ref} {input} | "\
           "samtools view -bh - | "\
-          "samtools sort -o {output_path}/bwa.bam; "\
+          "samtools sort -o {output_path}/bwa.bam) 2>> bwa.log; "\
           "samtools index {output_path}/bwa.bam".format(threads=args.threads,
-                                                            ref=args.ref,
-                                                            input=args.input,
-                                                            output_path=args.output_path)
+                                                        ref=args.ref,
+                                                        input=args.input,
+                                                        output_path=args.output_path)
     start_time = time.time()
     subprocess.run(bwa, shell=True)
     elapsed_time = time.time() - start_time
@@ -39,10 +39,10 @@ if args.bwa:
 ###################### BWA | DODI
 if args.bwa_dodi:
     # -a, dodi
-    bwa_dodi = "bwa mem -a -t {threads} {ref} {input} | "\
+    bwa_dodi = "(bwa mem -a -t {threads} {ref} {input} | "\
                "dodi --paired False - | "\
                "samtools view -bh - | "\
-               "samtools sort -o {output_path}/bwa_dodi.bam; "\
+               "samtools sort -o {output_path}/bwa_dodi.bam) 2>> bwa_dodi.log; "\
                "samtools index {output_path}/bwa_dodi.bam".format(threads=args.threads,
                                                                       ref=args.ref,
                                                                       input=args.input,
@@ -54,9 +54,9 @@ if args.bwa_dodi:
 
 ###################### MINIMAP2
 if args.minimap2:
-    minimap2 = "minimap2 -ax map-ont -t {threads} {ref} {input} | "\
+    minimap2 = "(minimap2 -ax map-ont -t {threads} {ref} {input} | "\
                "samtools view -bh - | "\
-               "samtools sort -o {output_path}/minimap2.bam; "\
+               "samtools sort -o {output_path}/minimap2.bam) 2>> minimap2.log; "\
                "samtools index {output_path}/minimap2.bam".format(threads=args.threads,
                                                                            ref=args.ref,
                                                                            input=args.input,
@@ -69,10 +69,10 @@ if args.minimap2:
 ###################### MINIMAP2 | DODI
 if args.minimap2_dodi:
     #-N 100 --secondary=yes -p 0, dodi
-    minimap2_dodi = "minimap2 -N 100 --secondary=yes -p 0 -ax map-ont -t {threads} {ref} {input} | "\
+    minimap2_dodi = "(minimap2 -N 100 --secondary=yes -p 0 -ax map-ont -t {threads} {ref} {input} | "\
                     "dodi --paired False - | "\
                     "samtools view -bh - | "\
-                    "samtools sort -o {output_path}/minimap2_dodi.bam; "\
+                    "samtools sort -o {output_path}/minimap2_dodi.bam) 2>> minimap2_dodi.log; "\
                     "samtools index {output_path}/minimap2_dodi.bam".format(threads=args.threads,
                                                                             ref=args.ref,
                                                                             input=args.input,
@@ -104,13 +104,13 @@ if args.lastal or args.lastal_dodi or args.lastalsplit or args.lastal_lastsplit:
 
 ###################### LASTAL | LAST-SPLIT
 if args.lastal_lastsplit:
-    lastal_lastsplit = "lastal -p {output_path}/trained_parameters.txt -P {threads} -Q0 {ref} {input} "\
+    lastal_lastsplit = "(lastal -p {output_path}/trained_parameters.txt -P {threads} -Q0 {ref} {input} "\
                        "| last-split | maf-convert sam > {output_path}/lastal_lastsplit.sam; "\
                        "samtools view -H {output_path}/lastal_lastsplit.sam > {output_path}/old_header.sam; "\
                        "cat {output_path}/old_header.sam {output_path}/sq_lines.txt > {output_path}/new_header.sam; "\
                        "cat {output_path}/new_header.sam {output_path}/lastal_lastsplit.sam | "\
                        "samtools view -bh - | "\
-                       "samtools sort -o {output_path}/lastal_lastsplit.bam; "\
+                       "samtools sort -o {output_path}/lastal_lastsplit.bam) 2>> lastal_lastsplit.log; "\
                        "samtools index {output_path}/lastal_lastsplit.bam".format(ref=args.ref,
                                                                                   input=args.input,
                                                                                   output_path=args.output_path,
@@ -123,13 +123,13 @@ if args.lastal_lastsplit:
 ###################### LASTAL --SPLIT
 if args.lastalsplit:
     # lastal --split
-    lastalsplit = "lastal -p {output_path}/trained_parameters.txt -P{threads} -Q0 {ref} {input} "\
+    lastalsplit = "(lastal -p {output_path}/trained_parameters.txt -P{threads} -Q0 {ref} {input} "\
                   "| last-split | maf-convert sam > {output_path}/lastalsplit.sam; "\
                   "samtools view -H {output_path}/lastalsplit.sam > {output_path}/old_header.sam; "\
                   "cat {output_path}/old_header.sam {output_path}/sq_lines.txt > {output_path}/new_header.sam; "\
                   "cat {output_path}/new_header.sam {output_path}/lastalsplit.sam |" \
                   "samtools view -bh - | "\
-                  "samtools sort -o {output_path}/lastalsplit.bam; "\
+                  "samtools sort -o {output_path}/lastalsplit.bam) 2>> lastalsplit.log; "\
                   "samtools index {output_path}/lastalsplit.bam".format(ref=args.ref,
                                                                         input=args.input,
                                                                         output_path=args.output_path,
@@ -141,13 +141,13 @@ if args.lastalsplit:
 
 ###################### LASTAL
 if args.lastal:
-    lastal = "lastal -p {output_path}/trained_parameters.txt -P{threads} -Q0 {ref} {input} | " \
+    lastal = "(lastal -p {output_path}/trained_parameters.txt -P{threads} -Q0 {ref} {input} | " \
              "maf-convert sam > {output_path}/lastal.sam; " \
              "samtools view -H {output_path}/lastal.sam > {output_path}/old_header.sam; " \
              "cat {output_path}/old_header.sam {output_path}/sq_lines.txt > {output_path}/new_header.sam; " \
              "cat {output_path}/new_header.sam {output_path}/lastal.sam |" \
              "samtools view -bh - | " \
-             "samtools sort -o {output_path}/lastal.bam; " \
+             "samtools sort -o {output_path}/lastal.bam) 2>> lastal.log; " \
              "samtools index {output_path}/lastal.bam".format(ref=args.ref,
                                                               input=args.input,
                                                               output_path=args.output_path,
@@ -159,22 +159,22 @@ if args.lastal:
 
 ###################### LASTAL | DODI
 if args.lastal:
-    lastal = "lastal -p {output_path}/trained_parameters.txt -P {threads} -Q0 {ref} {input} | "\
+    lastal = "(lastal -p {output_path}/trained_parameters.txt -P {threads} -Q0 {ref} {input} | "\
               "maf-convert sam > {output_path}/lastal.sam; "\
               "samtools view -H {output_path}/lastal.sam > {output_path}/old_header.sam; "\
               "cat {output_path}/old_header.sam {output_path}/sq_lines.txt > {output_path}/new_header.sam; "\
               "cat {output_path}/new_header.sam {output_path}/lastal.sam | "\
               "samtools view -bh - | "\
-              "samtools sort -o {output_path}/lastal.bam; "\
+              "samtools sort -o {output_path}/lastal.bam) 2>> lastal.log; "\
               "samtools index {output_path}/lastal.bam".format(ref=args.ref,
                                                                input=args.input,
                                                                output_path=args.output_path,
                                                                threads=args.threads)
 
 if args.lastal_dodi and args.lastal:
-    lastal_dodi = "dodi --paired False {output_path}/lastal.sam | "\
+    lastal_dodi = "(dodi --paired False {output_path}/lastal.sam | "\
                   "samtools view -bh - | "\
-                  "samtools sort -o {output_path}/lastal_dodi.bam; "\
+                  "samtools sort -o {output_path}/lastal_dodi.bam) 2>> lastal_dodi.log; "\
                   "samtools index {output_path}/lastal_dodi.bam".format(ref=args.ref,
                                                                         input=args.input,
                                                                         output_path=args.output_path,
@@ -185,13 +185,13 @@ if args.lastal_dodi and args.lastal:
     print(f"dodi took {elapsed_time:.2f} seconds")
 
 if args.lastal_dodi and not args.lastal:
-    lastal_dodi = "lastal -p {output_path}/trained_parameters.txt -P {threads} -Q0 {ref} {input} | "\
+    lastal_dodi = "(lastal -p {output_path}/trained_parameters.txt -P {threads} -Q0 {ref} {input} | "\
                   "dodi --paired False - | maf-convert sam > {output_path}/lastal_dodi.sam; "\
                   "samtools view -H {output_path}/lastal_ldodi.sam > {output_path}/old_header.sam; "\
                   "cat {output_path}/old_header.sam {output_path}/sq_lines.txt > {output_path}/new_header.sam; "\
                   "cat {output_path}/new_header.sam {output_path}/lastal_dodi.sam | "\
                   "samtools view -bh - | "\
-                  "samtools sort -o {output_path}/lastal_dodi.bam; "\
+                  "samtools sort -o {output_path}/lastal_dodi.bam) 2>> lastal_dodi.log; "\
                   "samtools index {output_path}/lastal_dodi.bam".format(ref=args.ref,
                                                                         input=args.input,
                                                                         output_path=args.output_path,
@@ -203,9 +203,9 @@ if args.lastal_dodi and not args.lastal:
 
 ###################### NGMLR
 if args.ngmlr:
-    ngmlr = "ngmlr -t {threads} -r {ref} -q {input} -x ont --verbose | "\
+    ngmlr = "(ngmlr -t {threads} -r {ref} -q {input} -x ont --verbose | "\
             "samtools view -bh - | "\
-            "samtools sort -o {output_path}/ngmlr.bam; "\
+            "samtools sort -o {output_path}/ngmlr.bam) 2>> ngmlr.log; "\
             "samtools index {output_path}/ngmlr.bam".format(ref=args.ref,
                                                             input=args.input,
                                                             output_path=args.output_path,
@@ -217,7 +217,7 @@ if args.ngmlr:
 
 ###################### VACMAP
 if args.vacmap:
-    vacmap = "vacmap -ref {ref} -read {input} -mode S -t {threads} | samtools sort -@4 > vacmap.bam; "\
+    vacmap = "vacmap -ref {ref} -read {input} -mode S -t {threads} | samtools sort -@4 > {output_path}/vacmap.bam 2>vacmap.log; "\
              "samtools index -@4 vacmap.bam".format(ref=args.ref,
                                                     input=args.input,
                                                     output_path=args.output_path,

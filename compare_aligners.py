@@ -7,15 +7,19 @@ parse = argparse.ArgumentParser()
 parse.add_argument('--input_path', help='')
 parse.add_argument('--output_path', help='')
 parse.add_argument('--bwa', help='', action='store_true')
+parse.add_argument('--bwa_x', help='', action='store_true')
 parse.add_argument('--bwa_dodi', help='', action='store_true')
 parse.add_argument('--bwa_flags', help='', action='store_true')
+parse.add_argument('--bwa_flags_dodi', help='', action='store_true')
 parse.add_argument('--minimap2', help='', action='store_true')
 parse.add_argument('--minimap2_dodi', help='', action='store_true')
 parse.add_argument('--lastal_dodi', help='', action='store_true')
 parse.add_argument('--lastal_lastsplit', help='', action='store_true')
 parse.add_argument('--lastalsplit', help='', action='store_true')
 parse.add_argument('--ngmlr', help='', action='store_true')
-parse.add_argument('--vacmap', help='', action='store_true')
+parse.add_argument('--ngmlr_x', help='', action='store_true')
+parse.add_argument('--vacmap_r', help='', action='store_true')
+parse.add_argument('--vacmap_s', help='', action='store_true')
 args = parse.parse_args()
 
 data = {}
@@ -23,10 +27,18 @@ if args.bwa:
     file = args.input_path + '/bwa.mappings_labelled.csv'
     bwa=pd.read_csv(file, sep='\t')
     data['bwa'] = bwa
+if args.bwa_x:
+    file = args.input_path + '/bwa_x.mappings_labelled.csv'
+    bwa_x=pd.read_csv(file, sep='\t')
+    data['bwa_x'] = bwa_x
 if args.bwa_dodi:
     file = args.input_path + '/bwa_dodi.mappings_labelled.csv'
     bwa_dodi=pd.read_csv(file, sep='\t')
     data['bwa_dodi'] = bwa_dodi
+if args.bwa_flags_dodi:
+    file = args.input_path + '/bwa_flags_dodi.mappings_labelled.csv'
+    bwa_flags_dodi = pd.read_csv(file, sep='\t')
+    data['bwa_flags_dodi'] = bwa_flags_dodi
 if args.bwa_flags:
     file = args.input_path + '/bwa_flags.mappings_labelled.csv'
     bwa_flags = pd.read_csv(file, sep='\t')
@@ -55,14 +67,26 @@ if args.ngmlr:
     file = args.input_path + '/ngmlr.mappings_labelled.csv'
     ngmlr=pd.read_csv(file, sep='\t')
     data['ngmlr'] = ngmlr
-if args.vacmap:
-    file = args.input_path + '/vacmap.mappings_labelled.csv'
-    vacmap=pd.read_csv(file, sep='\t')
-    data['vacmap'] = vacmap
+if args.ngmlr_x:
+    file = args.input_path + '/ngmlr_x.mappings_labelled.csv'
+    ngmlr_x = pd.read_csv(file, sep='\t')
+    data['ngmlr_x'] = ngmlr_x
+if args.vacmap_r:
+    file = args.input_path + '/vacmap_r.mappings_labelled.csv'
+    vacmap_r=pd.read_csv(file, sep='\t')
+    data['vacmap_r'] = vacmap_r
+if args.vacmap_s:
+    file = args.input_path + '/vacmap_s.mappings_labelled.csv'
+    vacmap_s=pd.read_csv(file, sep='\t')
+    data['vacmap_s'] = vacmap_s
 
-
-colors = {'bwa': 'lightcoral', 'bwa_dodi': 'firebrick', 'minimap2': 'yellowgreen', 'minimap2_dodi': 'darkgreen',
-          'lastalsplit': 'royalblue', 'ngmlr': 'sienna', 'vacmap': 'purple'}
+colors = {'bwa': 'lightcoral', 'bwa_dodi': 'firebrick',
+          'bwa_flags': 'gold', 'bwa_flags_dodi': 'orange',
+          'bwa_x': 'red',
+          'minimap2': 'yellowgreen', 'minimap2_dodi': 'darkgreen',
+          'lastalsplit': 'royalblue',
+          'ngmlr': 'sienna', 'ngmlr_x': 'chocolate',
+          'vacmap_r': 'purple', 'vacmap_s': 'magenta'}
 
 def create_bins(dict, base):
     for name, df in dict.items():
@@ -106,7 +130,7 @@ def precision_aln_size(data):
     plt.ylabel('Precision')
     plt.ylim(0, 1.1)
     plt.tight_layout()
-    plt.savefig(args.output_path + '/size_vs_precision.jpg')
+    plt.savefig(args.output_path + '/size_vs_precision.png', dpi=600)
     #plt.show()
     plt.close()
 
@@ -130,7 +154,7 @@ def wrong_plot_bins(data):
     plt.xlabel('Alignment size')
     plt.ylabel('Wrong %')
     plt.tight_layout()
-    plt.savefig(args.output_path + '/aln_size_vs_wrong_bin.jpg')
+    plt.savefig(args.output_path + '/aln_size_vs_wrong_bin.png', dpi=600)
     #plt.show()
     plt.close()
 
@@ -165,7 +189,7 @@ def precision_mapq(data):
     plt.ylabel('Precision')
     plt.ylim(0, 1.1)
     plt.tight_layout()
-    plt.savefig(args.output_path + '/mapq_vs_precision.jpg')
+    plt.savefig(args.output_path + '/mapq_vs_precision.png', dpi=600)
     #plt.show()
     plt.close()
 
@@ -174,14 +198,24 @@ def precision_mapq(data):
         data3['bwa'] = bwa
     if args.bwa_dodi:
         data3['bwa_dodi'] = bwa_dodi
+    if args.bwa_x:
+        data3['bwa_x'] = bwa_x
+    if args.bwa_flags_dodi:
+        data3['bwa_flags_dodi'] = bwa_flags_dodi
+    if args.bwa_flags:
+        data3['bwa_flags'] = bwa_flags
     if args.minimap2:
         data3['minimap2'] = minimap2
     if args.minimap2_dodi:
         data3['minimap2_dodi'] = minimap2_dodi
     if args.ngmlr:
         data3['ngmlr'] = ngmlr
-    if args.vacmap:
-        data3['vacmap'] = vacmap
+    if args.ngmlr_x:
+        data3['ngmlr_x'] = ngmlr_x
+    if args.vacmap_r:
+        data3['vacmap_r'] = vacmap_r
+    if args.vacmap_s:
+        data3['vacmap_s'] = vacmap_s
 
     for name, df in data3.items():
         bin_precision = []
@@ -200,7 +234,7 @@ def precision_mapq(data):
     plt.ylabel('Precision')
     plt.ylim(0, 1.1)
     plt.tight_layout()
-    plt.savefig(args.output_path + '/mapq_vs_precision.jpg')
+    plt.savefig(args.output_path + '/mapq_vs_precision.png', dpi=600)
     #plt.show()
     plt.close()
 
