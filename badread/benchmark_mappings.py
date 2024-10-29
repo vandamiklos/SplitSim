@@ -56,12 +56,9 @@ def load_frag_info(pth):
     fq = pysam.FastxFile(pth)
     for r in fq:
         name = r.__str__().split('\n')[0][1:]
-        print(f"Read name: {name}")
         if 'alignments' in name and 'junk_seq' not in name and 'random_seq' not in name:
             ie = InsEvent(name)
             ins_events[ie.qname] = ie
-            print(f"Added InsEvent: {ie.qname}")
-    print('N alignments in reads', len(ins_events))
     return ins_events
 
 
@@ -144,6 +141,7 @@ def analyse_ins_numbers(df, ins_events, prefix):
                 all_res.append(r)
 
     df_res = pd.DataFrame(all_res)
+    df_res.to_csv(prefix + 'benchmark_res.csv', sep='\t', index=False)
     df['tp'] = tp
     df['fp'] = fp
     df['ins_aln'] = ins_aln_idx
@@ -159,6 +157,7 @@ def analyse_ins_numbers(df, ins_events, prefix):
         st.write('precision\trecall\tf-score\tn\n')
         st.write(f'{prec}\t{recall}\t{f}\t{len(d)}\n')
     d.to_csv(prefix + 'mappings_labelled.csv', sep='\t', index=False)
+
 
     # assess mapping accuracy by alignment length
     plt.figure()
@@ -234,6 +233,25 @@ def analyse_ins_numbers(df, ins_events, prefix):
     plt.savefig(prefix + 'aln_size_vs_wrong.pdf')
     plt.close()
 
+    # mapped/total - wrong/mapped
+    x = []
+    y = []
+    mapped = 0
+    total = len(d)
+    for index, b in d.groupby('qname'):
+        mapped += len(b)
+        wrong += (len(b) - b['tp'].sum())
+        x.append(wrong/mapped)
+        y.append(mapped/total)
+
+    plt.plot(x, y)
+    plt.xlabel('wrong/mapped')
+    plt.ylabel('mapped/total')
+    plt.tight_layout()
+    plt.savefig(prefix + 'mapped_total_vs_wrong_mapped.pdf')
+    plt.close()
+
+
 def expected_mappings_per_read(prefix, ins_events):
     expect = []
     for i in ins_events.values():
@@ -267,3 +285,4 @@ def benchmark_mappings(args):
     ins_events = load_frag_info(args.target)
     expected_mappings_per_read(prefix, ins_events)
     analyse_ins_numbers(table, ins_events, prefix)
+

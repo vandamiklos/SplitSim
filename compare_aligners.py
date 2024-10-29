@@ -100,12 +100,15 @@ def create_bins(dict, base):
 if 'short' in args.input_path:
     base = 25
     cutoff = 600
+    title = 'short'
 if 'medium' in args.input_path:
     base = 50
     cutoff = 1200
+    title = 'medium'
 if 'long' in args.input_path:
     cutoff = 1500
     base = 100
+    title = 'long'
 
 data = create_bins(data, base)
 
@@ -240,3 +243,32 @@ def precision_mapq(data):
 
 
 precision_mapq(data)
+
+
+
+def addlabels(x,y):
+    for i in range(len(x)):
+        plt.text(i, y[i], y[i], ha='center')
+
+
+
+def mapped_alignments(data):
+    counts = []
+    c = []
+    n = []
+    for name, df in data.items():
+        counts.append(len(df))
+        c.append(colors[name])
+        n.append(name)
+
+    fig, ax = plt.subplots(figsize=(15,15))
+    ax.bar(data.keys(), counts, label=data.keys(), color=c)
+    addlabels(data.keys(), counts)
+    ax.set_ylabel('Mapped fragments')
+    ax.set_title(title)
+    ax.legend(title='aligners', bbox_to_anchor=(0.9, 0.75), fontsize='xx-small')
+    plt.setp(ax.get_xticklabels(), rotation=45, horizontalalignment='right')
+    plt.subplots_adjust(bottom=0.2)
+    plt.savefig(args.output_path + '/n_fragments.png', dpi=600)
+
+mapped_alignments(data)

@@ -57,6 +57,10 @@ def main(output=sys.stderr):
         from .benchmark_mappings import benchmark_mappings
         benchmark_mappings(args)
 
+    elif args.subparser_name == 'same_chr':
+        from .generate_split_reads import generate_reads
+        generate_reads(args)
+
 
 def parse_args(args):
     parser = MyParser(description=bold('SplitReadSimulator: a split-read simulator that can imitate many'
@@ -71,6 +75,7 @@ def parse_args(args):
     generate_split_reads_subparser(subparsers)
     collect_mapping_info_subparser(subparsers)
     benchmark_mappings_subparser(subparsers)
+    same_chr_subparser(subparsers)
 
 
     longest_choice_name = max(len(c) for c in subparsers.choices)
@@ -253,6 +258,33 @@ def plot_subparser(subparsers):
 
 def generate_split_reads_subparser(subparsers):
     group = subparsers.add_parser('generate_split_reads', description='Generate split-reads',
+                                  formatter_class=MyHelpFormatter, add_help=False)
+
+    required_args = group.add_argument_group('Required arguments')
+    required_args.add_argument('--reference', type=str, required=True,
+                               help='Reference FASTA file')
+    required_args.add_argument('--number', type=int, required=True,
+                               help='Number of different split-reads to generate')
+    required_args.add_argument("--mean", help='alignment number mean (poisson distribution), '
+                                             'default: DEFAULT)',
+                               default=3, type=int)
+
+    sim_args = group.add_argument_group('Options',
+                                        description='Length distribution parameters of the blocks')
+    sim_args.add_argument('--mean-block-len', type=int, default='150',
+                          help='Block length mean (gamma distribution), '
+                               'default: DEFAULT)')
+    sim_args.add_argument('--std-block-len', type=int, default='150',
+                          help='Block length stdev (gamma distribution), '
+                               'default: DEFAULT)')
+
+    other_args = group.add_argument_group('Other')
+    other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
+                            help='Show this help message and exit')
+
+
+def same_chr_subparser(subparsers):
+    group = subparsers.add_parser('same_chr', description='Generate split-reads where each fragment is from the same chromosome',
                                   formatter_class=MyHelpFormatter, add_help=False)
 
     required_args = group.add_argument_group('Required arguments')

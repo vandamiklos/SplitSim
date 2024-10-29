@@ -4,7 +4,35 @@ SplitReadSimulator
 This is a fork of BadreadAmplicon. It generates split-reads for the testing of long-read aligners.
 
 ### Usage:
+#### Generate split-reads
+```bash
+splitreadsimulator generate_split_reads --reference /path_to/ref_genome.fa \
+                                        --number 100 --mean 10 \
+                                        --mean-block-len 100 --std-block-len 100 > /out_path/split_reads.fa
+```
 
+#### Simulate a sequencing run
+
+```bash
+splitreadsimulator simulate --reference /path_to/split_reads.fa --quantity 1x > /out_path/simulated.fq
+```
+
+#### Align
+Align with a tool you would like to test.
+
+
+#### Convert BAM to BED
+
+```bash
+splitreadsimulator collect_mapping_info --bam /path_to/mappings.bam --out /path_to/out_folder/mappings
+```
+
+#### Benchmark
+
+```bash
+splitreadsimulator benchmark_mappings --query /path_to/mappings.bed --target /path_to/simulated.fq \
+                                      --out /path_to/out_folder --prefix prefix
+```
 
 Documentation for Badread:
 --------------------------
