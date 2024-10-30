@@ -180,7 +180,7 @@ def analyse_ins_numbers(df, ins_events, prefix):
     bin_id = []
     s = []
     for bid, b in d.groupby('bins'):
-        print('bin id', bid, 'mappings', len(b), 'tp', b['tp'].sum(), 'fp', b['fp'].sum())
+        # print('bin id', bid, 'mappings', len(b), 'tp', b['tp'].sum(), 'fp', b['fp'].sum())
         s.append(len(b))
         bin_precison.append(b['tp'].sum() / (b['tp'].sum() + b['fp'].sum()))
         bin_id.append(bid)
@@ -236,17 +236,18 @@ def analyse_ins_numbers(df, ins_events, prefix):
     # mapped/total - wrong/mapped
     x = []
     y = []
-    mapped = 0
+    mapped=0.1
+    wrong=0.1
     total = len(d)
-    for index, b in d.groupby('qname'):
-        mapped += len(b)
-        wrong += (len(b) - b['tp'].sum())
-        x.append(wrong/mapped)
+    for index, b in d.groupby('mapq'):
+        mapped += b['tp'].sum()
+        wrong += b['fp'].sum()
+        x.append(wrong/total)
         y.append(mapped/total)
 
     plt.plot(x, y)
-    plt.xlabel('wrong/mapped')
-    plt.ylabel('mapped/total')
+    plt.xlabel('false positive rate')
+    plt.ylabel('true positive rate')
     plt.tight_layout()
     plt.savefig(prefix + 'mapped_total_vs_wrong_mapped.pdf')
     plt.close()
