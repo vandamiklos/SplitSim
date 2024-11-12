@@ -2,6 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import argparse
 import numpy as np
+import seaborn as sns
 
 parse = argparse.ArgumentParser()
 parse.add_argument('--input_path', help='')
@@ -23,71 +24,101 @@ parse.add_argument('--vacmap_s', help='', action='store_true')
 args = parse.parse_args()
 
 data = {}
+benchmark_res={}
 if args.bwa:
     file = args.input_path + '/bwa.mappings_labelled.csv'
     bwa=pd.read_csv(file, sep='\t')
     data['bwa'] = bwa
+    benchmark=pd.read_csv(args.input_path + '/bwa.benchmark_res.csv', sep='\t')
+    benchmark_res['bwa'] = benchmark
 if args.bwa_x:
     file = args.input_path + '/bwa_x.mappings_labelled.csv'
     bwa_x=pd.read_csv(file, sep='\t')
     data['bwa_x'] = bwa_x
+    benchmark=pd.read_csv(args.input_path + '/bwa_x.benchmark_res.csv', sep='\t')
+    benchmark_res['bwa_x'] = benchmark
 if args.bwa_dodi:
     file = args.input_path + '/bwa_dodi.mappings_labelled.csv'
     bwa_dodi=pd.read_csv(file, sep='\t')
     data['bwa_dodi'] = bwa_dodi
+    benchmark=pd.read_csv(args.input_path + '/bwa_dodi.benchmark_res.csv', sep='\t')
+    benchmark_res['bwa_dodi'] = benchmark
 if args.bwa_flags_dodi:
     file = args.input_path + '/bwa_flags_dodi.mappings_labelled.csv'
     bwa_flags_dodi = pd.read_csv(file, sep='\t')
     data['bwa_flags_dodi'] = bwa_flags_dodi
+    benchmark=pd.read_csv(args.input_path + '/bwa_flags_dodi.benchmark_res.csv', sep='\t')
+    benchmark_res['bwa_flags_dodi'] = benchmark
 if args.bwa_flags:
     file = args.input_path + '/bwa_flags.mappings_labelled.csv'
     bwa_flags = pd.read_csv(file, sep='\t')
     data['bwa_flags'] = bwa_flags
+    benchmark=pd.read_csv(args.input_path + '/bwa_flags.benchmark_res.csv', sep='\t')
+    benchmark_res['bwa_flags'] = benchmark
 if args.minimap2:
     file = args.input_path + '/minimap2.mappings_labelled.csv'
     minimap2=pd.read_csv(file, sep='\t')
     data['minimap2'] = minimap2
+    benchmark=pd.read_csv(args.input_path + '/minimap2.benchmark_res.csv', sep='\t')
+    benchmark_res['minimap2'] = benchmark
 if args.minimap2_dodi:
     file = args.input_path + '/minimap2_dodi.mappings_labelled.csv'
     minimap2_dodi=pd.read_csv(file, sep='\t')
     data['minimap2_dodi'] = minimap2_dodi
+    benchmark=pd.read_csv(args.input_path + '/minimap2_dodi.benchmark_res.csv', sep='\t')
+    benchmark_res['minimap2_dodi'] = benchmark
 if args.lastalsplit:
     file = args.input_path + '/lastalsplit.mappings_labelled.csv'
     lastalsplit=pd.read_csv(file, sep='\t')
     data['lastalsplit'] = lastalsplit
+    benchmark=pd.read_csv(args.input_path + '/lastalsplit.benchmark_res.csv', sep='\t')
+    benchmark_res['lastalsplit'] = benchmark
 if args.lastal_lastsplit:
     file = args.input_path + '/lastal_lastsplit.mappings_labelled.csv'
     lastal_lastsplit=pd.read_csv(file, sep='\t')
     data['lastal_lastsplit'] = lastal_lastsplit
+    benchmark=pd.read_csv(args.input_path + '/lastal_split.benchmark_res.csv', sep='\t')
+    benchmark_res['lastal_split'] = benchmark
 if args.lastal_dodi:
     file = args.input_path + '/lastal_dodi.mappings_labelled.csv'
     lastal_dodi=pd.read_csv(file, sep='\t')
     data['lastal_dodi'] = lastal_dodi
+    benchmark=pd.read_csv(args.input_path + '/lastal_dodi.benchmark_res.csv', sep='\t')
+    benchmark_res['lastal_dodi'] = benchmark
 if args.ngmlr:
     file = args.input_path + '/ngmlr.mappings_labelled.csv'
     ngmlr=pd.read_csv(file, sep='\t')
     data['ngmlr'] = ngmlr
+    benchmark=pd.read_csv(args.input_path + '/ngmlr.benchmark_res.csv', sep='\t')
+    benchmark_res['ngmlr'] = benchmark
 if args.ngmlr_x:
     file = args.input_path + '/ngmlr_x.mappings_labelled.csv'
     ngmlr_x = pd.read_csv(file, sep='\t')
     data['ngmlr_x'] = ngmlr_x
+    benchmark=pd.read_csv(args.input_path + '/ngmlr_x.benchmark_res.csv', sep='\t')
+    benchmark_res['ngmlr_x'] = benchmark
 if args.vacmap_r:
     file = args.input_path + '/vacmap_r.mappings_labelled.csv'
     vacmap_r=pd.read_csv(file, sep='\t')
     data['vacmap_r'] = vacmap_r
+    benchmark=pd.read_csv(args.input_path + '/vacmap_r.benchmark_res.csv', sep='\t')
+    benchmark_res['vacmap_r'] = benchmark
 if args.vacmap_s:
     file = args.input_path + '/vacmap_s.mappings_labelled.csv'
     vacmap_s=pd.read_csv(file, sep='\t')
     data['vacmap_s'] = vacmap_s
+    benchmark=pd.read_csv(args.input_path + '/vacmap_s.benchmark_res.csv', sep='\t')
+    benchmark_res['vacmap_s'] = benchmark
 
 colors = {'bwa': 'lightcoral', 'bwa_dodi': 'firebrick',
           'bwa_flags': 'gold', 'bwa_flags_dodi': 'orange',
           'bwa_x': 'red',
           'minimap2': 'yellowgreen', 'minimap2_dodi': 'darkgreen',
-          'lastalsplit': 'royalblue',
+          'lastalsplit': 'royalblue', 'lastal_dodi':'lightblue',
           'ngmlr': 'sienna', 'ngmlr_x': 'chocolate',
           'vacmap_r': 'purple', 'vacmap_s': 'magenta'}
 
+scale = 0.1
 def create_bins(dict, base):
     for name, df in dict.items():
         bins = []
@@ -120,12 +151,12 @@ def precision_aln_size(data):
         for bid, b in df.groupby('bins'):
             if bid > cutoff:
                 break
-            s.append(len(b))
+            s.append(len(b)*scale)
             bin_precision.append(b['tp'].sum() / (b['tp'].sum() + b['fp'].sum()))
             bin_id.append(bid)
 
         plt.plot(bin_id, bin_precision, label=name, c=colors[name])
-        plt.scatter(bin_id, bin_precision, s=s, alpha=0.5, c=colors[name])
+        plt.scatter(bin_id, bin_precision, s=s, alpha=0.25, c=colors[name], linewidths=0)
 
     plt.legend(loc='best', fontsize='xx-small')
     plt.xscale("log")
@@ -180,12 +211,12 @@ def precision_mapq(data):
         s = []
         for bid, b in df.groupby('mapq'):
             prec = b['tp'].sum() / (b['tp'].sum() + b['fp'].sum())
-            s.append(len(b))
+            s.append(len(b)*scale)
             bin_precision.append(prec)
             bin_id.append(bid)
 
         plt.plot(bin_id, bin_precision, label=name, c=colors[name])
-        plt.scatter(bin_id, bin_precision, s=s, alpha=0.5, c=colors[name])
+        plt.scatter(bin_id, bin_precision, s=s, alpha=0.25, c=colors[name], linewidths=0)
 
     plt.legend(loc='best', fontsize='xx-small')
     plt.xlabel('MapQ')
@@ -225,12 +256,12 @@ def precision_mapq(data):
         bin_id = []
         s = []
         for bid, b in df.groupby('mapq'):
-            s.append(len(b))
+            s.append(len(b)*scale)
             bin_precision.append(b['tp'].sum() / (b['tp'].sum() + b['fp'].sum()))
             bin_id.append(bid)
 
         plt.plot(bin_id, bin_precision, label=name, c=colors[name])
-        plt.scatter(bin_id, bin_precision, s=s, alpha=0.5, c=colors[name])
+        plt.scatter(bin_id, bin_precision, s=s, alpha=0.25, c=colors[name], linewidths=0)
 
     plt.legend(loc='best', fontsize='xx-small')
     plt.xlabel('MapQ')
@@ -270,5 +301,83 @@ def mapped_alignments(data):
     plt.setp(ax.get_xticklabels(), rotation=45, horizontalalignment='right')
     plt.subplots_adjust(bottom=0.2)
     plt.savefig(args.output_path + '/n_fragments.png', dpi=600)
+    plt.close()
 
 mapped_alignments(data)
+
+
+def fragment_length_dist(data):
+    plt.figure()
+    for name, df in data.items():
+        sns.kdeplot(df['aln_size'], alpha=0.25, label = name, color=colors[name])
+    plt.xlabel('fragment length')
+    plt.ylabel('density function')
+    plt.legend(fontsize='xx-small')
+    plt.savefig(args.output_path + '/fragment_len_dist.png', dpi=600)
+    plt.close()
+
+fragment_length_dist(data)
+
+
+markers={'bwa': 'p', 'bwa_dodi': 'P',
+          'bwa_flags': '.', 'bwa_flags_dodi': 'o',
+          'bwa_x': '*',
+          'minimap2': 'x', 'minimap2_dodi': 'X',
+          'lastalsplit': 'P', 'lastal_dodi':'+',
+          'ngmlr': 'd', 'ngmlr_x': 'D',
+          'vacmap_r': 'h', 'vacmap_s': 'H'}
+
+
+def ROC_curve(data):
+    for name, df in data.items():
+        x = []
+        y = []
+        s = []
+        wrong=0
+        mapped=0
+        total = len(df)
+        for i, b in df.groupby('mapq'):
+            mapped += b['tp'].sum()
+            wrong += b['fp'].sum()
+            x.append(wrong / total)
+            y.append(mapped / (wrong + mapped))
+            s.append(len(b)*scale)
+
+        plt.plot(x, y, label=name, color=colors[name])
+        plt.scatter(x, y, s=s, alpha=0.25, color=colors[name], linewidths=0)
+
+    plt.xlabel('False positive / Mapped')
+    plt.ylabel('True positive / Total mapped')
+    plt.legend(fontsize='xx-small')
+    plt.tight_layout()
+    plt.savefig(args.output_path + '/ROC.png')
+    plt.close()
+
+
+ROC_curve(data)
+
+
+def upset_plot(benchmark_res):
+    import pyupset as pyu
+    good = {}
+    mediocre = {}
+    bad = {}
+    for name, df in benchmark_res.items():
+        df['ins_diff'] = abs(df['n_target']-df['n_ins'])/df['n_target']
+        df['tp_percent'] = df['tp']/df['n_ins']
+        g = df.query('ins_diff < 0.25 and tp_percent > 0.75')
+        m = df.query('ins_diff > 0.25 and ins_diff < 0.5 and tp_percent < 0.75 and tp_percent > 0.5')
+        b = df[~df.qname.isin(g['qname'])]
+        b = b[~b.qname.isin(m['qname'])]
+        good[name] = g[['qname']]
+        mediocre[name] = m[['qname']]
+        bad[name] = b[['qname']]
+    pyu.plot(good)
+    pyu.plot(mediocre)
+    pyu.plot(bad)
+
+upset_plot(benchmark_res)
+
+
+
+

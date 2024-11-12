@@ -28,6 +28,8 @@ def mapping_info(f, outf):
     yes = 0
     for qname, v in d.items():
         flag = [(index, i) for index, i in enumerate(v) if not i.flag & 2304]
+        if len(flag) == 0:
+            continue
         if len(flag) > 1:  # todo check bug in dodi, not currently setting primary alignment flag properly
             flag = [flag[flag.index(max(flag, key=lambda x: x[1].get_tag('AS')))]]
 # try to catch the errors

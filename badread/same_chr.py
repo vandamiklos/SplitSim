@@ -15,7 +15,7 @@ def read_fasta(args):
     return fasta
 
 
-def generate_split_reads(args, ref, n_seqs, mean, frag_lengths):
+def generate_same_chr(args, ref, n_seqs, mean, frag_lengths):
     chroms = list(ref.references)
     strand = ['forward', 'reverse']
     for n in range(n_seqs):
@@ -50,12 +50,12 @@ def generate_split_reads(args, ref, n_seqs, mean, frag_lengths):
         print(final_seq)
 
 
-def generate_reads(args):
+def generate_same_chr_reads(args):
     ref = pysam.FastaFile(args.reference)
 
     print(f"Generating {args.number} split-reads", file=sys.stderr)
 
     frag_lengths = fragment_lengths.FragmentLengths(args.mean_block_len, args.std_block_len)
-    generate_split_reads(args, ref, args.number, args.mean, frag_lengths)
+    generate_same_chr(args, ref, args.number, args.mean, frag_lengths)
 
     print(f"Done", file=sys.stderr)

@@ -86,7 +86,7 @@ def analyse_ins_numbers(df, ins_events, prefix):
     plt.savefig(prefix + 'mappings_vs_expected.pdf')
     plt.close()
 
-    scale = 10
+    scale = 0.1
     min_expect = d['expected'].min()
     line = {'expected': range(min_expect, max_expect), 'mapped': range(min_expect, max_expect)}
     counts = d.groupby(['expected', 'mapped']).size().reset_index(name='size')
@@ -116,10 +116,11 @@ def analyse_ins_numbers(df, ins_events, prefix):
             alns = list(zip(grp['chrom'], grp['rstart'], grp['rend'], grp.index, grp['mapq']))
             if len(alns) > 2 and target_ins_alns:
                 # check if found match target
-                ins_alns = alns[1:-1]
+                # ins_alns = alns[1:-1]
+                ins_alns = alns
                 for ia in ins_alns:
                     ins_aln_idx[ia[3]] = 1
-                r = {'n_target': len(target_ins_alns), 'n_ins': len(ins_alns), 'tp': 0, 'fp': 0, 'fn': 0}
+                r = {'qname': k, 'n_target': len(target_ins_alns), 'n_ins': len(ins_alns), 'tp': 0, 'fp': 0, 'fn': 0}
                 for blockA in target_ins_alns:
                     for blockB in ins_alns:
                         if match_func(blockA, tuple(blockB)):
@@ -181,7 +182,9 @@ def analyse_ins_numbers(df, ins_events, prefix):
     s = []
     for bid, b in d.groupby('bins'):
         # print('bin id', bid, 'mappings', len(b), 'tp', b['tp'].sum(), 'fp', b['fp'].sum())
-        s.append(len(b))
+        if len(b) < 5:
+            continue
+        s.append(len(b) * scale)
         bin_precison.append(b['tp'].sum() / (b['tp'].sum() + b['fp'].sum()))
         bin_id.append(bid)
 
@@ -200,7 +203,9 @@ def analyse_ins_numbers(df, ins_events, prefix):
     bin_id = []
     s = []
     for bid, b in d.groupby('mapq'):
-        s.append(len(b))
+        if len(b) < 5:
+            continue
+        s.append(len(b) * scale)
         bin_precison.append(b['tp'].sum() / (b['tp'].sum() + b['fp'].sum()))
         bin_id.append(bid)
 
@@ -236,20 +241,21 @@ def analyse_ins_numbers(df, ins_events, prefix):
     # mapped/total - wrong/mapped
     x = []
     y = []
-    mapped=0.1
-    wrong=0.1
-    total = len(d)
-    for index, b in d.groupby('mapq'):
+    wrong = 0
+    mapped = 0
+    s=[]
+    total=len(d)
+    for i, b in d.groupby('mapq'):
         mapped += b['tp'].sum()
         wrong += b['fp'].sum()
         x.append(wrong/total)
-        y.append(mapped/total)
-
+        y.append(mapped/(wrong+mapped))
+        s.append(len(b)*scale)
     plt.plot(x, y)
-    plt.xlabel('false positive rate')
-    plt.ylabel('true positive rate')
-    plt.tight_layout()
-    plt.savefig(prefix + 'mapped_total_vs_wrong_mapped.pdf')
+    plt.scatter(x, y, s=s, alpha=0.25)
+    plt.xlabel('False positive / Mapped')
+    plt.ylabel('True positive / Total mapped')
+    plt.savefig(prefix + 'ROC.pdf')
     plt.close()
 
 

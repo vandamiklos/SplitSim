@@ -58,8 +58,8 @@ def main(output=sys.stderr):
         benchmark_mappings(args)
 
     elif args.subparser_name == 'same_chr':
-        from .generate_split_reads import generate_reads
-        generate_reads(args)
+        from .same_chr import generate_same_chr_reads
+        generate_same_chr_reads(args)
 
 
 def parse_args(args):
