@@ -46,9 +46,7 @@ class InsEvent:
         return len(self.blocks)
 
     def get_ins_blocks(self):
-        if len(self.blocks) > 2:
-            return self.blocks[1:-1]
-        return []
+        return self.blocks
 
 
 def load_frag_info(pth):
@@ -86,7 +84,7 @@ def analyse_ins_numbers(df, ins_events, prefix):
     plt.savefig(prefix + 'mappings_vs_expected.pdf')
     plt.close()
 
-    scale = 0.1
+    scale = 0.01
     min_expect = d['expected'].min()
     line = {'expected': range(min_expect, max_expect), 'mapped': range(min_expect, max_expect)}
     counts = d.groupby(['expected', 'mapped']).size().reset_index(name='size')
@@ -114,7 +112,7 @@ def analyse_ins_numbers(df, ins_events, prefix):
             e = ins_events[name]
             target_ins_alns = e.get_ins_blocks()
             alns = list(zip(grp['chrom'], grp['rstart'], grp['rend'], grp.index, grp['mapq']))
-            if len(alns) > 2 and target_ins_alns:
+            if target_ins_alns:
                 # check if found match target
                 # ins_alns = alns[1:-1]
                 ins_alns = alns
@@ -248,6 +246,27 @@ def analyse_ins_numbers(df, ins_events, prefix):
     for i, b in d.groupby('mapq'):
         mapped += b['tp'].sum()
         wrong += b['fp'].sum()
+        x.append(wrong/total)
+        y.append(mapped/(wrong+mapped))
+        s.append(len(b)*scale)
+    plt.plot(x, y)
+    plt.scatter(x, y, s=s, alpha=0.25)
+    plt.xlabel('False positive / Mapped')
+    plt.ylabel('True positive / Total mapped')
+    plt.savefig(prefix + 'ROC.pdf')
+    plt.close()
+
+
+    # precision - recall curve (mapq)
+    recall = []
+    precision = []
+    p = 0
+    r = 0
+    s=[]
+    total=len(d)
+    for i, b in d.groupby('ins_size'):
+        p += b['tp'].sum() / (b['tp'].sum() + b['fp'].sum())
+        r += b['tp'].sum() / (b['tp'].sum() + b['fn'].sum())
         x.append(wrong/total)
         y.append(mapped/(wrong+mapped))
         s.append(len(b)*scale)

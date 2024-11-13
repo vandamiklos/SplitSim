@@ -28,14 +28,16 @@ def mapping_info(f, outf):
     yes = 0
     for qname, v in d.items():
         flag = [(index, i) for index, i in enumerate(v) if not i.flag & 2304]
+        # no primary flag set
         if len(flag) == 0:
-            continue
+            flag = [(index, i) for index, i in enumerate(v) if not i.flag]
+            flag = [flag[flag.index(max(flag, key=lambda x: x[1].get_tag('AS')))]]
         if len(flag) > 1:  # todo check bug in dodi, not currently setting primary alignment flag properly
             flag = [flag[flag.index(max(flag, key=lambda x: x[1].get_tag('AS')))]]
 # try to catch the errors
-        if len(flag) != 1:
-            print('Error in ', f, 'flag problem', len(flag), [i.flag for i in v])
-            quit()
+        #if len(flag) != 1:
+        #    print('Error in ', f, 'flag problem', len(flag), [i.flag for i in v])
+        #    quit()
         pri_index, pri_read = flag[0]
         primary_reverse = bool(pri_read.flag & 16)
         seq = pri_read.get_forward_sequence()

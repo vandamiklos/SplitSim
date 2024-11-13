@@ -155,7 +155,7 @@ def precision_aln_size(data):
             bin_precision.append(b['tp'].sum() / (b['tp'].sum() + b['fp'].sum()))
             bin_id.append(bid)
 
-        plt.plot(bin_id, bin_precision, label=name, c=colors[name])
+        plt.plot(bin_id, bin_precision, label=name, c=colors[name], alpha=0.8)
         plt.scatter(bin_id, bin_precision, s=s, alpha=0.25, c=colors[name], linewidths=0)
 
     plt.legend(loc='best', fontsize='xx-small')
@@ -182,7 +182,7 @@ def wrong_plot_bins(data):
             bin_w.append(bid)
             wrong += len(b) - b['tp'].sum()
 
-        plt.plot(bin_w, bin_wrong, label=name, c=colors[name])
+        plt.plot(bin_w, bin_wrong, label=name, c=colors[name], alpha=0.8)
 
     plt.legend(loc='best', fontsize='xx-small')
     plt.xlabel('Alignment size')
@@ -215,7 +215,7 @@ def precision_mapq(data):
             bin_precision.append(prec)
             bin_id.append(bid)
 
-        plt.plot(bin_id, bin_precision, label=name, c=colors[name])
+        plt.plot(bin_id, bin_precision, label=name, c=colors[name], alpha=0.8)
         plt.scatter(bin_id, bin_precision, s=s, alpha=0.25, c=colors[name], linewidths=0)
 
     plt.legend(loc='best', fontsize='xx-small')
@@ -260,7 +260,7 @@ def precision_mapq(data):
             bin_precision.append(b['tp'].sum() / (b['tp'].sum() + b['fp'].sum()))
             bin_id.append(bid)
 
-        plt.plot(bin_id, bin_precision, label=name, c=colors[name])
+        plt.plot(bin_id, bin_precision, label=name, c=colors[name], alpha=0.8)
         plt.scatter(bin_id, bin_precision, s=s, alpha=0.25, c=colors[name], linewidths=0)
 
     plt.legend(loc='best', fontsize='xx-small')
@@ -276,11 +276,9 @@ def precision_mapq(data):
 precision_mapq(data)
 
 
-
 def addlabels(x,y):
     for i in range(len(x)):
         plt.text(i, y[i], y[i], ha='center')
-
 
 
 def mapped_alignments(data):
@@ -343,7 +341,7 @@ def ROC_curve(data):
             y.append(mapped / (wrong + mapped))
             s.append(len(b)*scale)
 
-        plt.plot(x, y, label=name, color=colors[name])
+        plt.plot(x, y, label=name, color=colors[name], alpha=0.8)
         plt.scatter(x, y, s=s, alpha=0.25, color=colors[name], linewidths=0)
 
     plt.xlabel('False positive / Mapped')
@@ -355,28 +353,6 @@ def ROC_curve(data):
 
 
 ROC_curve(data)
-
-
-def upset_plot(benchmark_res):
-    import pyupset as pyu
-    good = {}
-    mediocre = {}
-    bad = {}
-    for name, df in benchmark_res.items():
-        df['ins_diff'] = abs(df['n_target']-df['n_ins'])/df['n_target']
-        df['tp_percent'] = df['tp']/df['n_ins']
-        g = df.query('ins_diff < 0.25 and tp_percent > 0.75')
-        m = df.query('ins_diff > 0.25 and ins_diff < 0.5 and tp_percent < 0.75 and tp_percent > 0.5')
-        b = df[~df.qname.isin(g['qname'])]
-        b = b[~b.qname.isin(m['qname'])]
-        good[name] = g[['qname']]
-        mediocre[name] = m[['qname']]
-        bad[name] = b[['qname']]
-    pyu.plot(good)
-    pyu.plot(mediocre)
-    pyu.plot(bad)
-
-upset_plot(benchmark_res)
 
 
 
