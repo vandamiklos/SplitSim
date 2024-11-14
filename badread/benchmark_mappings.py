@@ -35,10 +35,9 @@ class InsEvent:
         blocks = parts[2].split('_')
         self.blocks = []
         for k in blocks:
-            if 'False' not in k:
-                a = k.split(':')
-                chrom = a[0]
-                start, end = a[1].split('-')
+            a = k.split(':')
+            chrom = a[0]
+            start, end = a[1].split('-')
             self.blocks.append((chrom, int(start), int(end)))
         self.identity = float(parts[-1].split('=')[1][:-1])
 
@@ -71,7 +70,7 @@ def analyse_ins_numbers(df, ins_events, prefix):
     max_expect = d['expected'].max()
     u = d['expected'].unique().tolist()
     u.sort()
-    # min alignment is 3, for a single insertion between two tel ends
+
     fig, axes = plt.subplots(len(u), 1, figsize=(7, len(u)*2), sharex=True)
     for i in range(len(u)):
         dd = d[d['expected'] == u[i]]
@@ -103,9 +102,10 @@ def analyse_ins_numbers(df, ins_events, prefix):
     df.reset_index()
     fp = np.zeros(len(df))
     tp = np.zeros(len(df))
-    ins_aln_idx = np.zeros(len(df))
+    #ins_aln_idx = np.zeros(len(df))
 
     all_res = []
+    fn={}
     for k, grp in df.groupby('qname'):
         name = k.split('.')[0]
         if name in ins_events:
@@ -115,18 +115,20 @@ def analyse_ins_numbers(df, ins_events, prefix):
             if target_ins_alns:
                 # check if found match target
                 # ins_alns = alns[1:-1]
-                ins_alns = alns
-                for ia in ins_alns:
-                    ins_aln_idx[ia[3]] = 1
-                r = {'qname': k, 'n_target': len(target_ins_alns), 'n_ins': len(ins_alns), 'tp': 0, 'fp': 0, 'fn': 0}
+                #ins_alns = alns
+                #for ia in ins_alns:
+                    #ins_aln_idx[ia[3]] = 1
+                r = {'qname': k, 'n_target': len(target_ins_alns), 'n_ins': len(alns), 'tp': 0, 'fp': 0, 'fn': 0}
+                fn_alns=[]
                 for blockA in target_ins_alns:
-                    for blockB in ins_alns:
+                    for blockB in alns:
                         if match_func(blockA, tuple(blockB)):
                             break
                     else:
                         r['fn'] += 1
+                        fn_alns.append(blockA)
 
-                for blockB in ins_alns:
+                for blockB in alns:
                     for blockA in target_ins_alns:
                         if match_func(blockA, tuple(blockB)):
                             r['tp'] += 1
@@ -138,14 +140,42 @@ def analyse_ins_numbers(df, ins_events, prefix):
                         assert fp[blockB[3]] == 0
                         fp[blockB[3]] = 1
                 all_res.append(r)
+        fn[k] = fn_alns
+
+    #print(fn)
+
+    fn_res=[]
+    for qname, d in fn.items():
+        temp = []
+        for index, pos in enumerate(d):
+            rd = {'qname': qname,
+                  'chrom': pos[0],
+                  'qstart': pos[1],
+                  'qend': pos[2],
+                  'fn': 1,
+                  'aln_size': pos[2]- pos[1]}
+            temp.append(rd)
+        fn_res+=temp
+
+    df1 = pd.DataFrame.from_records(fn_res).sort_values(['qname', 'qstart'])
 
     df_res = pd.DataFrame(all_res)
     df_res.to_csv(prefix + 'benchmark_res.csv', sep='\t', index=False)
     df['tp'] = tp
     df['fp'] = fp
-    df['ins_aln'] = ins_aln_idx
+    #df['ins_aln'] = ins_aln_idx
 
-    d = df[df['ins_aln'] == 1]
+    df2 = df.merge(df_res[['qname', 'n_target']], on='qname', how='left')
+    df2.to_csv(prefix + 'benchmark_res2.csv', sep='\t', index=False)
+
+    df3 = pd.concat([df1, df], axis=0, ignore_index=True)
+    df3.fillna(0, inplace=True)
+    df3.sort_values(['qname', 'qstart'])
+    df3.to_csv(prefix + 'benchmark_res3.csv', sep='\t', index=False)
+
+
+    #d = df[df['ins_aln'] == 1]
+    d = df
     assert (len(d) == df_res['tp'].sum() + df_res['fp'].sum())
     prec = round(df_res['tp'].sum() / (df_res['tp'].sum() + df_res['fp'].sum()), 4)
     recall = round(df_res['tp'].sum() / (df_res['tp'].sum() + df_res['fn'].sum()), 4)
@@ -175,6 +205,7 @@ def analyse_ins_numbers(df, ins_events, prefix):
         bins.append(base * round(i/base))  # round to nearest 50
     d = d.assign(bins=bins)
 
+
     bin_precison = []
     bin_id = []
     s = []
@@ -186,8 +217,8 @@ def analyse_ins_numbers(df, ins_events, prefix):
         bin_precison.append(b['tp'].sum() / (b['tp'].sum() + b['fp'].sum()))
         bin_id.append(bid)
 
-    plt.plot(bin_id, bin_precison)
-    plt.scatter(bin_id, bin_precison, s=s, alpha=0.25)
+    plt.plot(bin_id, bin_precison, alpha=0.8)
+    plt.scatter(bin_id, bin_precison, s=s, alpha=0.25, linewidths=0)
     plt.xlabel('alignment size')
     plt.ylabel('Precision')
     plt.ylim(0, 1.1)
@@ -207,8 +238,8 @@ def analyse_ins_numbers(df, ins_events, prefix):
         bin_precison.append(b['tp'].sum() / (b['tp'].sum() + b['fp'].sum()))
         bin_id.append(bid)
 
-    plt.plot(bin_id, bin_precison)
-    plt.scatter(bin_id, bin_precison, s=s, alpha=0.5)
+    plt.plot(bin_id, bin_precison, alpha=0.8)
+    plt.scatter(bin_id, bin_precison, s=s, alpha=0.5, linewidths=0)
     # plt.xlim(0, 2000)
     plt.xlabel('MapQ')
     plt.ylabel('Precision')
@@ -236,45 +267,56 @@ def analyse_ins_numbers(df, ins_events, prefix):
     plt.savefig(prefix + 'aln_size_vs_wrong.pdf')
     plt.close()
 
+
+    # precision - recall curve (mapq)
+    bins=[]
+    for i in df3['aln_size']:
+        bins.append(base * round(i/base))  # round to nearest 50
+    df3 = df3.assign(bins=bins)
+
+    recall = []
+    precision = []
+    tp = 0
+    fp = 0
+    fn = 0
+    s=[]
+    for i, b in df3.groupby('bins'):
+        tp += b['tp'].sum()
+        if tp < 1:
+            continue
+        fp += b['fp'].sum()
+        fn += b['fn'].sum()
+        precision.append(tp/(tp+fp))
+        recall.append(tp/(tp+fn))
+        s.append(len(b)*scale)
+    plt.plot(recall, precision, alpha=0.8)
+    plt.scatter(recall, precision, s=s, alpha=0.25, linewidths=0)
+    plt.gca().invert_xaxis()
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.savefig(prefix + 'Precision-Recall.pdf')
+    plt.close()
+
     # mapped/total - wrong/mapped
     x = []
     y = []
-    wrong = 0
-    mapped = 0
     s=[]
-    total=len(d)
-    for i, b in d.groupby('mapq'):
-        mapped += b['tp'].sum()
-        wrong += b['fp'].sum()
-        x.append(wrong/total)
-        y.append(mapped/(wrong+mapped))
+    fn = 0
+    tp = 0
+    total=len(df3)
+    for i, b in df3.groupby('mapq'):
+        if len(b) < 5:
+            continue
+        tp += b['tp'].sum()
+        fp += b['fp'].sum()
+        y.append((tp+fp)/total)
+        x.append((fp)/total)
         s.append(len(b)*scale)
-    plt.plot(x, y)
-    plt.scatter(x, y, s=s, alpha=0.25)
-    plt.xlabel('False positive / Mapped')
-    plt.ylabel('True positive / Total mapped')
-    plt.savefig(prefix + 'ROC.pdf')
-    plt.close()
-
-
-    # precision - recall curve (mapq)
-    recall = []
-    precision = []
-    p = 0
-    r = 0
-    s=[]
-    total=len(d)
-    for i, b in d.groupby('ins_size'):
-        p += b['tp'].sum() / (b['tp'].sum() + b['fp'].sum())
-        r += b['tp'].sum() / (b['tp'].sum() + b['fn'].sum())
-        x.append(wrong/total)
-        y.append(mapped/(wrong+mapped))
-        s.append(len(b)*scale)
-    plt.plot(x, y)
-    plt.scatter(x, y, s=s, alpha=0.25)
-    plt.xlabel('False positive / Mapped')
-    plt.ylabel('True positive / Total mapped')
-    plt.savefig(prefix + 'ROC.pdf')
+    plt.plot(x, y, alpha=0.8)
+    plt.scatter(x, y, s=s, alpha=0.25, linewidths=0)
+    plt.ylabel('Mapped per bin (tp+fp)/ Total expected mappings')
+    plt.xlabel('Wrong mappings per bin (fp)/ Total expected mappings')
+    plt.savefig(prefix + 'ROC_mapq.pdf')
     plt.close()
 
 

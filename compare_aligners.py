@@ -118,7 +118,7 @@ colors = {'bwa': 'lightcoral', 'bwa_dodi': 'firebrick',
           'ngmlr': 'sienna', 'ngmlr_x': 'chocolate',
           'vacmap_r': 'purple', 'vacmap_s': 'magenta'}
 
-scale = 0.1
+scale = 0.01
 def create_bins(dict, base):
     for name, df in dict.items():
         bins = []

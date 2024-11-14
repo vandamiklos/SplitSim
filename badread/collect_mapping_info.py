@@ -30,11 +30,14 @@ def mapping_info(f, outf):
         flag = [(index, i) for index, i in enumerate(v) if not i.flag & 2304]
         # no primary flag set
         if len(flag) == 0:
+            print('Flag problem: no primary alignment')
             flag = [(index, i) for index, i in enumerate(v) if not i.flag]
-            flag = [flag[flag.index(max(flag, key=lambda x: x[1].get_tag('AS')))]]
+            if len(flag) == 0:
+                continue
+            flag = flag[0]
         if len(flag) > 1:  # todo check bug in dodi, not currently setting primary alignment flag properly
             flag = [flag[flag.index(max(flag, key=lambda x: x[1].get_tag('AS')))]]
-# try to catch the errors
+    # try to catch the errors
         #if len(flag) != 1:
         #    print('Error in ', f, 'flag problem', len(flag), [i.flag for i in v])
         #    quit()
@@ -98,13 +101,13 @@ def mapping_info(f, outf):
             continue
 
         # Add in inferred alignments at the ends 'missing bread'
-        temp = sorted(temp, key=lambda r: r['qstart'])
-        qstart_gap = temp[0]['qstart']
-        qend_gap = temp[0]['qlen'] - temp[0]['qend']
+        # temp = sorted(temp, key=lambda r: r['qstart'])
+        # qstart_gap = temp[0]['qstart']
+        # qend_gap = temp[0]['qlen'] - temp[0]['qend']
 
-        if qstart_gap > 5 and qend_gap > 5:  # gaps at both ends, skip these
-            res += temp
-            continue
+        # if qstart_gap > 5 and qend_gap > 5:  # gaps at both ends, skip these
+            # res += temp
+            # continue
 
         res += temp
 
