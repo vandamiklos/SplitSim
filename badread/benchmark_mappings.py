@@ -339,6 +339,16 @@ def expected_mappings_per_read(prefix, ins_events):
     plt.close()
 
 
+def find_duplications(ins_events):
+    duplication = []
+    for idx, qname in ins_events.items():
+        e = ins_events[idx]
+        target_ins_alns = e.get_ins_blocks()
+        for l in range(1, len(target_ins_alns)):
+            if target_ins_alns[l][0] == target_ins_alns[l-1][0] and abs(target_ins_alns[l][1] - target_ins_alns[l-1][2]) < 50:
+                duplication.append(idx)
+    print(duplication)
+
 def benchmark_mappings(args):
     table = pd.read_csv(args.query, sep='\t')
     table = table.loc[table['is_secondary'] != 1]
@@ -353,4 +363,4 @@ def benchmark_mappings(args):
     ins_events = load_frag_info(args.target)
     expected_mappings_per_read(prefix, ins_events)
     analyse_ins_numbers(table, ins_events, prefix)
-
+    find_duplications(ins_events)

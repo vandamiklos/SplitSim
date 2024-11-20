@@ -110,13 +110,13 @@ if args.vacmap_s:
     benchmark=pd.read_csv(args.input_path + '/vacmap_s.benchmark_res.csv', sep='\t')
     benchmark_res['vacmap_s'] = benchmark
 
-colors = {'bwa': 'lightcoral', 'bwa_dodi': 'firebrick',
-          'bwa_flags': 'gold', 'bwa_flags_dodi': 'orange',
+colors = {'bwa': '#e69f00', 'bwa_dodi': 'firebrick',
+          'bwa_flags': 'gold', 'bwa_flags_dodi': 'lightcoral',
           'bwa_x': 'red',
-          'minimap2': 'yellowgreen', 'minimap2_dodi': 'darkgreen',
-          'lastalsplit': 'royalblue', 'lastal_dodi':'lightblue',
-          'ngmlr': 'sienna', 'ngmlr_x': 'chocolate',
-          'vacmap_r': 'purple', 'vacmap_s': 'magenta'}
+          'minimap2': '#009e73', 'minimap2_dodi': 'darkgreen',
+          'lastalsplit': '#56b4e9', 'lastal_dodi':'lightblue',
+          'ngmlr': '#cc79a7', 'ngmlr_x': 'chocolate',
+          'vacmap_r': '#d55e00', 'vacmap_s': 'magenta'}
 
 scale = 0.01
 def create_bins(dict, base):
