@@ -100,15 +100,6 @@ def mapping_info(f, outf):
             res += temp
             continue
 
-        # Add in inferred alignments at the ends 'missing bread'
-        # temp = sorted(temp, key=lambda r: r['qstart'])
-        # qstart_gap = temp[0]['qstart']
-        # qend_gap = temp[0]['qlen'] - temp[0]['qend']
-
-        # if qstart_gap > 5 and qend_gap > 5:  # gaps at both ends, skip these
-            # res += temp
-            # continue
-
         res += temp
 
     df = pd.DataFrame.from_records(res).sort_values(['qname', 'qstart'])

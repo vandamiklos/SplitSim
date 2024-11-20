@@ -102,7 +102,7 @@ def analyse_ins_numbers(df, ins_events, prefix):
     df.reset_index()
     fp = np.zeros(len(df))
     tp = np.zeros(len(df))
-    #ins_aln_idx = np.zeros(len(df))
+    ins_aln_idx = np.zeros(len(df))
 
     all_res = []
     fn={}
@@ -116,8 +116,8 @@ def analyse_ins_numbers(df, ins_events, prefix):
                 # check if found match target
                 # ins_alns = alns[1:-1]
                 #ins_alns = alns
-                #for ia in ins_alns:
-                    #ins_aln_idx[ia[3]] = 1
+                for ia in alns:
+                    ins_aln_idx[ia[3]] = 1
                 r = {'qname': k, 'n_target': len(target_ins_alns), 'n_ins': len(alns), 'tp': 0, 'fp': 0, 'fn': 0}
                 fn_alns=[]
                 for blockA in target_ins_alns:
@@ -163,19 +163,14 @@ def analyse_ins_numbers(df, ins_events, prefix):
     df_res.to_csv(prefix + 'benchmark_res.csv', sep='\t', index=False)
     df['tp'] = tp
     df['fp'] = fp
-    #df['ins_aln'] = ins_aln_idx
-
-    df2 = df.merge(df_res[['qname', 'n_target']], on='qname', how='left')
-    df2.to_csv(prefix + 'benchmark_res2.csv', sep='\t', index=False)
+    df['alns'] = ins_aln_idx
 
     df3 = pd.concat([df1, df], axis=0, ignore_index=True)
     df3.fillna(0, inplace=True)
     df3.sort_values(['qname', 'qstart'])
     df3.to_csv(prefix + 'benchmark_res3.csv', sep='\t', index=False)
 
-
-    #d = df[df['ins_aln'] == 1]
-    d = df
+    d = df[df['alns'] == 1]
     assert (len(d) == df_res['tp'].sum() + df_res['fp'].sum())
     prec = round(df_res['tp'].sum() / (df_res['tp'].sum() + df_res['fp'].sum()), 4)
     recall = round(df_res['tp'].sum() / (df_res['tp'].sum() + df_res['fn'].sum()), 4)
@@ -202,7 +197,7 @@ def analyse_ins_numbers(df, ins_events, prefix):
     bins = []
     base = 25
     for i in d['aln_size']:
-        bins.append(base * round(i/base))  # round to nearest 50
+        bins.append(base * round(i/base))  # round to nearest 100
     d = d.assign(bins=bins)
 
 
@@ -210,7 +205,6 @@ def analyse_ins_numbers(df, ins_events, prefix):
     bin_id = []
     s = []
     for bid, b in d.groupby('bins'):
-        # print('bin id', bid, 'mappings', len(b), 'tp', b['tp'].sum(), 'fp', b['fp'].sum())
         if len(b) < 5:
             continue
         s.append(len(b) * scale)
@@ -259,7 +253,6 @@ def analyse_ins_numbers(df, ins_events, prefix):
         bin_w.append(bid)
         wrong += len(b) - b['tp'].sum()
 
-
     plt.plot(bin_w, bin_wrong)
     plt.xlabel('Alignment size')
     plt.ylabel('Wrong %')
@@ -268,7 +261,7 @@ def analyse_ins_numbers(df, ins_events, prefix):
     plt.close()
 
 
-    # precision - recall curve (mapq)
+    # precision - recall curve (aln size)
     bins=[]
     for i in df3['aln_size']:
         bins.append(base * round(i/base))  # round to nearest 50
@@ -282,41 +275,94 @@ def analyse_ins_numbers(df, ins_events, prefix):
     s=[]
     for i, b in df3.groupby('bins'):
         tp += b['tp'].sum()
-        if tp < 1:
-            continue
         fp += b['fp'].sum()
         fn += b['fn'].sum()
+        if tp+fp == 0 or tp+fn == 0:
+            continue
+        if len(b) < 10:
+            continue
         precision.append(tp/(tp+fp))
         recall.append(tp/(tp+fn))
         s.append(len(b)*scale)
     plt.plot(recall, precision, alpha=0.8)
     plt.scatter(recall, precision, s=s, alpha=0.25, linewidths=0)
-    plt.gca().invert_xaxis()
+    # plt.gca().invert_xaxis()
     plt.xlabel('Recall')
     plt.ylabel('Precision')
     plt.savefig(prefix + 'Precision-Recall.pdf')
     plt.close()
 
-    # mapped/total - wrong/mapped
+    # BWA-MEM plot
     x = []
     y = []
     s=[]
-    fn = 0
-    tp = 0
+    tp = df3['tp'].sum()
+    fp = df3['fp'].sum()
+    fn = df3['fn'].sum()
     total=len(df3)
-    for i, b in df3.groupby('mapq'):
-        if len(b) < 5:
+    for i, b in df3.groupby('bins'):
+        tp -= b['tp'].sum()
+        fp -= b['fp'].sum()
+        fn -= b['fn'].sum()
+        if tp+fn+fp == 0:
             continue
-        tp += b['tp'].sum()
-        fp += b['fp'].sum()
-        y.append((tp+fp)/total)
-        x.append((fp)/total)
+        if (fp+tp+fn)/total< 0.2:
+            continue
+        y.append((fp+tp+fn)/total)
+        x.append((fp+fn)/(tp+fn+fp))
         s.append(len(b)*scale)
     plt.plot(x, y, alpha=0.8)
     plt.scatter(x, y, s=s, alpha=0.25, linewidths=0)
-    plt.ylabel('Mapped per bin (tp+fp)/ Total expected mappings')
-    plt.xlabel('Wrong mappings per bin (fp)/ Total expected mappings')
-    plt.savefig(prefix + 'ROC_mapq.pdf')
+    plt.ylabel('mapped/total')
+    plt.xlabel('wrong/mapped')
+    plt.savefig(prefix + 'bwamempaper_aln_size_fn.pdf')
+    plt.close()
+
+
+    x = []
+    y = []
+    s=[]
+    tp = df3['tp'].sum()
+    fp = df3['fp'].sum()
+    total=tp+fp
+    for i, b in df3.groupby('bins'):
+        tp -= b['tp'].sum()
+        fp -= b['fp'].sum()
+        if tp+fp ==0:
+            continue
+        if (fp + tp + fn) / total < 0.2:
+            continue
+        y.append((fp+tp)/total)
+        x.append((fp)/(tp+fp))
+        s.append(len(b)*scale)
+    plt.plot(x, y, alpha=0.8)
+    plt.scatter(x, y, s=s, alpha=0.25, linewidths=0)
+    plt.ylabel('mapped/total')
+    plt.xlabel('wrong/mapped')
+    plt.savefig(prefix + 'bwamempaper_aln_size.pdf')
+    plt.close()
+
+
+    # BWA-MEM plot
+    x = []
+    y = []
+    s=[]
+    tp = df3['tp'].sum()
+    fp = df3['fp'].sum()
+    total=tp+fp
+    for i, b in df3.groupby('mapq'):
+        tp -= b['tp'].sum()
+        fp -= b['fp'].sum()
+        if tp+fp == 0:
+            continue
+        y.append((fp+tp)/total)
+        x.append((fp)/(tp+fp))
+        s.append(len(b)*scale)
+    plt.plot(x, y, alpha=0.8)
+    plt.scatter(x, y, s=s, alpha=0.25, linewidths=0)
+    plt.ylabel('mapped/total')
+    plt.xlabel('wrong/mapped')
+    plt.savefig(prefix + 'bwamempaper_mapq.pdf')
     plt.close()
 
 
