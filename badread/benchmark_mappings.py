@@ -51,12 +51,14 @@ class InsEvent:
 def load_frag_info(pth):
     ins_events = {}
     fq = pysam.FastxFile(pth)
+    n=0
     for r in fq:
         name = r.__str__().split('\n')[0][1:]
         if 'alignments' in name and 'junk_seq' not in name and 'random_seq' not in name:
             ie = InsEvent(name)
             ins_events[ie.qname] = ie
-    return ins_events
+            n += len(ie.get_ins_blocks())
+    return ins_events, n
 
 
 def analyse_ins_numbers(df, ins_events, prefix):
@@ -251,7 +253,7 @@ def analyse_ins_numbers(df, ins_events, prefix):
     for bid, b in d.groupby('bins'):
         bin_wrong.append(wrong / len(d))
         bin_w.append(bid)
-        wrong += len(b) - b['tp'].sum()
+        wrong += b['fp'].sum()
 
     plt.plot(bin_w, bin_wrong)
     plt.xlabel('Alignment size')
@@ -333,7 +335,7 @@ def analyse_ins_numbers(df, ins_events, prefix):
         if (fp + tp + fn) / total < 0.2:
             continue
         y.append((fp+tp)/total)
-        x.append((fp)/(tp+fp))
+        x.append(fp/(tp+fp))
         s.append(len(b)*scale)
     plt.plot(x, y, alpha=0.8)
     plt.scatter(x, y, s=s, alpha=0.25, linewidths=0)
@@ -406,7 +408,8 @@ def benchmark_mappings(args):
         prefix += '.'
     prefix = "/".join([args.out, prefix])
 
-    ins_events = load_frag_info(args.target)
+    ins_events, n = load_frag_info(args.target)
+    print(n)
     expected_mappings_per_read(prefix, ins_events)
     analyse_ins_numbers(table, ins_events, prefix)
-    find_duplications(ins_events)
+    #find_duplications(ins_events)
