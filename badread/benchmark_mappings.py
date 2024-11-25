@@ -61,7 +61,7 @@ def load_frag_info(pth):
     return ins_events, n
 
 
-def analyse_ins_numbers(df, ins_events, prefix):
+def analyse_ins_numbers(df, ins_events, prefix, n):
     res = []
     for k, grp in df.groupby('qname'):
         name = k.split('.')[0]
@@ -82,7 +82,7 @@ def analyse_ins_numbers(df, ins_events, prefix):
         sns.histplot(dd, x='mapped', ax=axes[i], discrete=True)
         axes[i].axvline(x=u[i], ls='--', color='r')
     plt.tight_layout()
-    plt.savefig(prefix + 'mappings_vs_expected.pdf')
+    plt.savefig(prefix + 'mappings_vs_expected.png', dpi=600)
     plt.close()
 
     scale = 0.01
@@ -93,7 +93,7 @@ def analyse_ins_numbers(df, ins_events, prefix):
     plt.scatter(data=counts, x='expected', y='mapped', alpha=0.8, s='size', linewidths=0)
     plt.plot(line['expected'], line['mapped'], color='r', alpha=0.5, ls='--')
     plt.tight_layout()
-    plt.savefig(prefix + 'mappings_vs_expected_scatter.pdf')
+    plt.savefig(prefix + 'mappings_vs_expected_scatter.png', dpi=600)
     plt.close()
 
     def match_func(block_A, block_B):
@@ -115,9 +115,6 @@ def analyse_ins_numbers(df, ins_events, prefix):
             target_ins_alns = e.get_ins_blocks()
             alns = list(zip(grp['chrom'], grp['rstart'], grp['rend'], grp.index, grp['mapq']))
             if target_ins_alns:
-                # check if found match target
-                # ins_alns = alns[1:-1]
-                #ins_alns = alns
                 for ia in alns:
                     ins_aln_idx[ia[3]] = 1
                 r = {'qname': k, 'n_target': len(target_ins_alns), 'n_ins': len(alns), 'tp': 0, 'fp': 0, 'fn': 0}
@@ -144,8 +141,6 @@ def analyse_ins_numbers(df, ins_events, prefix):
                 all_res.append(r)
         fn[k] = fn_alns
 
-    #print(fn)
-
     fn_res=[]
     for qname, d in fn.items():
         temp = []
@@ -155,7 +150,7 @@ def analyse_ins_numbers(df, ins_events, prefix):
                   'qstart': pos[1],
                   'qend': pos[2],
                   'fn': 1,
-                  'aln_size': pos[2]- pos[1]}
+                  'aln_size': pos[2] - pos[1]}
             temp.append(rd)
         fn_res+=temp
 
@@ -167,10 +162,13 @@ def analyse_ins_numbers(df, ins_events, prefix):
     df['fp'] = fp
     df['alns'] = ins_aln_idx
 
-    df3 = pd.concat([df1, df], axis=0, ignore_index=True)
-    df3.fillna(0, inplace=True)
-    df3.sort_values(['qname', 'qstart'])
-    df3.to_csv(prefix + 'benchmark_res3.csv', sep='\t', index=False)
+    df_fn = pd.concat([df1, df], axis=0, ignore_index=True)
+    df_fn = pd.merge(df_fn, df_res[['qname', 'n_target']], how='left', on='qname')
+    df_fn.fillna(0, inplace=True)
+    df_fn.sort_values(['qname', 'qstart'])
+    numeric_cols = df_fn.select_dtypes(include=['number'])
+    df_fn[numeric_cols.columns] = numeric_cols.astype(int)
+    df_fn.to_csv(prefix + 'benchmark_res_fn.csv', sep='\t', index=False)
 
     d = df[df['alns'] == 1]
     assert (len(d) == df_res['tp'].sum() + df_res['fp'].sum())
@@ -180,8 +178,8 @@ def analyse_ins_numbers(df, ins_events, prefix):
 
 
     with open(prefix + 'stats.txt', 'w') as st:
-        st.write('precision\trecall\tf-score\tn\n')
-        st.write(f'{prec}\t{recall}\t{f}\t{len(d)}\n')
+        st.write('precision\trecall\tf-score\tquery_n\ttarget_n\n')
+        st.write(f'{prec}\t{recall}\t{f}\t{len(d)}\tn\n')
     d.to_csv(prefix + 'mappings_labelled.csv', sep='\t', index=False)
 
 
@@ -191,7 +189,7 @@ def analyse_ins_numbers(df, ins_events, prefix):
     plt.ylabel('count')
     plt.xlabel('alignment size')
     plt.tight_layout()
-    plt.savefig(prefix + 'aln_sizes.pdf')
+    plt.savefig(prefix + 'aln_sizes.png', dpi=600)
     # plt.show()
     plt.close()
 
@@ -199,7 +197,7 @@ def analyse_ins_numbers(df, ins_events, prefix):
     bins = []
     base = 25
     for i in d['aln_size']:
-        bins.append(base * round(i/base))  # round to nearest 100
+        bins.append(base * round(i/base))  # round to nearest 50
     d = d.assign(bins=bins)
 
 
@@ -215,67 +213,88 @@ def analyse_ins_numbers(df, ins_events, prefix):
 
     plt.plot(bin_id, bin_precison, alpha=0.8)
     plt.scatter(bin_id, bin_precison, s=s, alpha=0.25, linewidths=0)
-    plt.xlabel('alignment size')
+    plt.xlabel('Alignment size')
     plt.ylabel('Precision')
     plt.ylim(0, 1.1)
     plt.tight_layout()
-    plt.savefig(prefix + 'size_vs_precision.pdf')
+    plt.savefig(prefix + 'size_vs_precision.png', dpi=600)
     # plt.show()
     plt.close()
 
     #mapq bins
-    bin_precison = []
-    bin_id = []
-    s = []
+    bin_precison2 = []
+    bin_id2 = []
+    s2 = []
     for bid, b in d.groupby('mapq'):
         if len(b) < 5:
             continue
-        s.append(len(b) * scale)
-        bin_precison.append(b['tp'].sum() / (b['tp'].sum() + b['fp'].sum()))
-        bin_id.append(bid)
+        s2.append(len(b) * scale)
+        bin_precison2.append(b['tp'].sum() / (b['tp'].sum() + b['fp'].sum()))
+        bin_id2.append(bid)
 
-    plt.plot(bin_id, bin_precison, alpha=0.8)
-    plt.scatter(bin_id, bin_precison, s=s, alpha=0.5, linewidths=0)
+    plt.plot(bin_id2, bin_precison2, alpha=0.8)
+    plt.scatter(bin_id2, bin_precison2, s=s2, alpha=0.5, linewidths=0)
     # plt.xlim(0, 2000)
     plt.xlabel('MapQ')
     plt.ylabel('Precision')
     plt.ylim(0, 1.1)
     plt.tight_layout()
-    plt.savefig(prefix + 'mapq_vs_precision.pdf')
+    plt.savefig(prefix + 'mapq_vs_precision.png', dpi=600)
     plt.close()
 
 
-    # cummulative graph?
-    # wrong/total - ins size
+    # cummulative graph - aln size
+    bin_fp = []
+    bin = []
+    fp = 0
+    s_fp=[]
+    for bid, b in d.groupby('bins'):
+        bin_fp.append(fp / n)
+        bin.append(bid)
+        fp += b['fp'].sum()
+        s_fp.append(len(b)*scale)
+
+    plt.plot(bin, bin_fp)
+    plt.scatter(bin, bin_fp, s=s_fp, alpha=0.5, linewidths=0)
+    plt.xlabel('Alignment size')
+    plt.ylabel('False positive %')
+    plt.tight_layout()
+    plt.savefig(prefix + 'aln_size_vs_wrong.png', dpi=600)
+    plt.close()
+
+
+    # cummulative graph - mapq
     bin_wrong = []
     bin_w = []
     wrong = 0
-    for bid, b in d.groupby('bins'):
-        bin_wrong.append(wrong / len(d))
+    s=[]
+    for bid, b in d.groupby('mapq'):
+        bin_wrong.append(wrong / n)
         bin_w.append(bid)
         wrong += b['fp'].sum()
+        s.append(len(b)*scale)
 
     plt.plot(bin_w, bin_wrong)
-    plt.xlabel('Alignment size')
-    plt.ylabel('Wrong %')
+    plt.scatter(bin_w, bin_wrong, s=s, alpha=0.5, linewidths=0)
+    plt.xlabel('MapQ')
+    plt.ylabel('False positive %')
     plt.tight_layout()
-    plt.savefig(prefix + 'aln_size_vs_wrong.pdf')
+    plt.savefig(prefix + 'mapq_vs_fp.png', dpi=600)
     plt.close()
 
 
     # precision - recall curve (aln size)
     bins=[]
-    for i in df3['aln_size']:
+    for i in df_fn['aln_size']:
         bins.append(base * round(i/base))  # round to nearest 50
-    df3 = df3.assign(bins=bins)
-
+    df_fn = df_fn.assign(bins=bins)
     recall = []
     precision = []
     tp = 0
     fp = 0
     fn = 0
     s=[]
-    for i, b in df3.groupby('bins'):
+    for i, b in df_fn.groupby('bins'):
         tp += b['tp'].sum()
         fp += b['fp'].sum()
         fn += b['fn'].sum()
@@ -291,80 +310,115 @@ def analyse_ins_numbers(df, ins_events, prefix):
     # plt.gca().invert_xaxis()
     plt.xlabel('Recall')
     plt.ylabel('Precision')
-    plt.savefig(prefix + 'Precision-Recall.pdf')
+    plt.savefig(prefix + 'Precision-Recall.png', dpi=600)
     plt.close()
 
     # BWA-MEM plot
     x = []
     y = []
     s=[]
-    tp = df3['tp'].sum()
-    fp = df3['fp'].sum()
-    fn = df3['fn'].sum()
-    total=len(df3)
-    for i, b in df3.groupby('bins'):
-        tp -= b['tp'].sum()
-        fp -= b['fp'].sum()
-        fn -= b['fn'].sum()
-        if tp+fn+fp == 0:
-            continue
-        if (fp+tp+fn)/total< 0.2:
-            continue
-        y.append((fp+tp+fn)/total)
-        x.append((fp+fn)/(tp+fn+fp))
-        s.append(len(b)*scale)
-    plt.plot(x, y, alpha=0.8)
-    plt.scatter(x, y, s=s, alpha=0.25, linewidths=0)
-    plt.ylabel('mapped/total')
-    plt.xlabel('wrong/mapped')
-    plt.savefig(prefix + 'bwamempaper_aln_size_fn.pdf')
-    plt.close()
-
-
-    x = []
-    y = []
-    s=[]
-    tp = df3['tp'].sum()
-    fp = df3['fp'].sum()
-    total=tp+fp
-    for i, b in df3.groupby('bins'):
-        tp -= b['tp'].sum()
-        fp -= b['fp'].sum()
-        if tp+fp ==0:
-            continue
-        if (fp + tp + fn) / total < 0.2:
-            continue
-        y.append((fp+tp)/total)
-        x.append(fp/(tp+fp))
-        s.append(len(b)*scale)
-    plt.plot(x, y, alpha=0.8)
-    plt.scatter(x, y, s=s, alpha=0.25, linewidths=0)
-    plt.ylabel('mapped/total')
-    plt.xlabel('wrong/mapped')
-    plt.savefig(prefix + 'bwamempaper_aln_size.pdf')
-    plt.close()
-
-
-    # BWA-MEM plot
-    x = []
-    y = []
-    s=[]
-    tp = df3['tp'].sum()
-    fp = df3['fp'].sum()
-    total=tp+fp
-    for i, b in df3.groupby('mapq'):
-        tp -= b['tp'].sum()
-        fp -= b['fp'].sum()
+    tp = df_fn['tp'].sum()
+    fp = df_fn['fp'].sum()
+    for i, b in df_fn.groupby('bins'):
         if tp+fp == 0:
             continue
-        y.append((fp+tp)/total)
-        x.append((fp)/(tp+fp))
+        y.append((fp+tp)/n)
+        x.append(fp/(tp+fp))
         s.append(len(b)*scale)
+        tp -= b['tp'].sum()
+        fp -= b['fp'].sum()
     plt.plot(x, y, alpha=0.8)
     plt.scatter(x, y, s=s, alpha=0.25, linewidths=0)
-    plt.ylabel('mapped/total')
-    plt.xlabel('wrong/mapped')
-    plt.savefig(prefix + 'bwamempaper_mapq.pdf')
+    plt.ylabel('tp+fp/total')
+    plt.xlabel('fp/tp+fp')
+    plt.savefig(prefix + 'bwamempaper_aln_size.png', dpi=600)
+    plt.close()
+
+
+    # BWA-MEM plot
+    x = []
+    y = []
+    s=[]
+    tp = df_fn['tp'].sum()
+    fp = df_fn['fp'].sum()
+    for i, b in df_fn.groupby('mapq'):
+        if tp+fp == 0:
+            continue
+        y.append(tp/n)
+        x.append(fp/n)
+        s.append(len(b)*scale)
+        tp -= b['tp'].sum()
+        fp -= b['fp'].sum()
+    plt.plot(x, y, alpha=0.8)
+    plt.scatter(x, y, s=s, alpha=0.25, linewidths=0)
+    plt.ylabel('tp/total')
+    plt.xlabel('fp/total')
+    plt.savefig(prefix + 'tp_fp_mapq.png', dpi=600)
+    plt.close()
+
+
+    # BWA-MEM plot
+    x = []
+    y = []
+    s=[]
+    tp = df_fn['tp'].sum()
+    fp = df_fn['fp'].sum()
+    for i, b in df_fn.groupby('mapq'):
+        if tp+fp == 0:
+            continue
+        y.append((fp+tp)/n)
+        x.append(fp/(tp+fp))
+        s.append(len(b)*scale)
+        tp -= b['tp'].sum()
+        fp -= b['fp'].sum()
+    plt.plot(x, y, alpha=0.8)
+    plt.scatter(x, y, s=s, alpha=0.25, linewidths=0)
+    plt.ylabel('tp+fp/total')
+    plt.xlabel('fp/tp+fp')
+    plt.savefig(prefix + 'bwamempaper_mapq.png', dpi=600)
+    plt.close()
+
+
+    # bwamem - number of alignments
+    x = []
+    y = []
+    s=[]
+    tp = df_fn['tp'].sum()
+    fp = df_fn['fp'].sum()
+    for i, b in df_fn.groupby('n_target'):
+        if tp+fp == 0:
+            continue
+        y.append((fp+tp)/n)
+        x.append(fp/(tp+fp))
+        s.append(len(b)*scale)
+        tp -= b['tp'].sum()
+        fp -= b['fp'].sum()
+    plt.plot(x, y, alpha=0.8)
+    plt.scatter(x, y, s=s, alpha=0.25, linewidths=0)
+    plt.ylabel('tp+fp/total')
+    plt.xlabel('fp/tp+fp')
+    plt.savefig(prefix + 'expected_alns_bwamem.png', dpi=600)
+    plt.close()
+
+
+    # precision - number of alignments
+    x = []
+    y = []
+    s=[]
+    for i, b in df_fn.groupby('n_target'):
+        tp = b['tp'].sum()
+        fp = b['fp'].sum()
+        if tp+fp == 0:
+            continue
+        y.append(tp/(tp+fp))
+        x.append(i)
+        s.append(len(b)*scale)
+
+    plt.plot(x, y, alpha=0.8)
+    plt.scatter(x, y, s=s, alpha=0.25, linewidths=0)
+    plt.ylabel('Precision')
+    plt.xlabel('Expected alignments')
+    plt.savefig(prefix + 'expected_alns_precision.png', dpi=600)
     plt.close()
 
 
@@ -376,14 +430,14 @@ def expected_mappings_per_read(prefix, ins_events):
     plt.ylabel('count')
     plt.xlabel('aln size')
     plt.tight_layout()
-    plt.savefig(prefix + 'expected_mappings_sizes.pdf')
+    plt.savefig(prefix + 'expected_mappings_sizes.png', dpi=600)
     plt.close()
 
     plt.hist([len(i.get_ins_blocks()) for i in ins_events.values()], bins=range(0, 15))
     plt.ylabel('count')
     plt.xlabel('aln size')
     plt.tight_layout()
-    plt.savefig(prefix + 'expected_mappings_per_read.pdf')
+    plt.savefig(prefix + 'expected_mappings_per_read.png', dpi=600)
     plt.close()
 
 
@@ -409,7 +463,7 @@ def benchmark_mappings(args):
     prefix = "/".join([args.out, prefix])
 
     ins_events, n = load_frag_info(args.target)
-    print(n)
+    print('Expected number of fragments: ', n)
     expected_mappings_per_read(prefix, ins_events)
-    analyse_ins_numbers(table, ins_events, prefix)
+    analyse_ins_numbers(table, ins_events, prefix, n)
     #find_duplications(ins_events)
