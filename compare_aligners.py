@@ -45,17 +45,20 @@ if 'short' in args.input_path:
     base = 25
     cutoff = 600
     title = 'short'
-    total = 99127
+    #total = 99127 # nanopore
+    total = 98965 # nanopore one chr
 if 'medium' in args.input_path:
     base = 25
     cutoff = 1200
     title = 'medium'
-    total = 99844
+    #total = 99844
+    total = 98511 # nanopore one chr
 if 'long' in args.input_path:
     cutoff = 1500
     base = 25
     title = 'long'
-    total = 97333
+    #total = 97333
+    total = 97737 # nanopore one chr
 
 data = create_bins(data, base, 'aln_size')
 benchmark_res = create_bins(benchmark_res, base, 'aln_size')
@@ -92,6 +95,34 @@ def precision_aln_size(data):
 precision_aln_size(data)
 
 
+def precision_mapq(data):
+    for name, df in data.items():
+        bin_precision = []
+        bin_id = []
+        s = []
+        for bid, b in df.groupby('mapq'):
+            if len(b) == 0:
+                continue
+            s.append(len(b)*scale)
+            bin_precision.append(b['tp'].sum() / (b['tp'].sum() + b['fp'].sum()))
+            bin_id.append(bid)
+
+        plt.plot(bin_id, bin_precision, label=name, c=colors[name], alpha=0.8)
+        plt.scatter(bin_id, bin_precision, s=s, alpha=0.25, c=colors[name], linewidths=0)
+
+    plt.legend(loc='best', fontsize='xx-small')
+    plt.xlabel('MapQ')
+    plt.ylabel('Precision')
+    plt.ylim(0, 1.1)
+    plt.tight_layout()
+    plt.savefig(args.output_path + '/mapq_vs_precision.png', dpi=600)
+    #plt.show()
+    plt.close()
+
+
+precision_mapq(data)
+
+
 def wrong_plot_bins(data):
     for name, df in data.items():
         bin_wrong = []
@@ -116,6 +147,32 @@ def wrong_plot_bins(data):
 
 
 wrong_plot_bins(benchmark_res)
+
+
+def wrong_plot_mapq(data):
+    for name, df in data.items():
+        bin_wrong = []
+        bin_w = []
+        wrong = 0
+        s=[]
+        for bid, b in df.groupby('mapq'):
+            bin_wrong.append(wrong / total * 100)
+            bin_w.append(bid)
+            wrong += b['fp'].sum()
+            s.append(len(b) * scale)
+        plt.plot(bin_w, bin_wrong, label=name, c=colors[name], alpha=0.8)
+        plt.scatter(bin_w, bin_wrong, s=s, alpha=0.25, c=colors[name], linewidths=0)
+    plt.legend(loc='best', fontsize='xx-small')
+    #plt.xscale("log")
+    plt.xlabel('Mapq')
+    plt.ylabel('False positive %')
+    plt.tight_layout()
+    plt.savefig(args.output_path + '/fp_mapq.png', dpi=600)
+    #plt.show()
+    plt.close()
+
+
+wrong_plot_mapq(benchmark_res)
 
 
 def wrong_plot_bins2(data):
@@ -145,32 +202,80 @@ def wrong_plot_bins2(data):
 wrong_plot_bins2(benchmark_res)
 
 
-def precision_mapq(data):
+
+def precision_recall_aln_size(data):
     for name, df in data.items():
-        bin_precision = []
-        bin_id = []
+        recall = []
+        precision = []
+        tp = df['tp'].sum()
+        fp = df['fp'].sum()
+        fn = df['fn'].sum()
         s = []
-        for bid, b in df.groupby('mapq'):
-            if len(b) == 0:
+        for i, b in df.groupby('bins'):
+            tp -= b['tp'].sum()
+            fp -= b['fp'].sum()
+            fn -= b['fn'].sum()
+            if tp + fp == 0 or tp + fn == 0:
                 continue
-            s.append(len(b)*scale)
-            bin_precision.append(b['tp'].sum() / (b['tp'].sum() + b['fp'].sum()))
-            bin_id.append(bid)
-
-        plt.plot(bin_id, bin_precision, label=name, c=colors[name], alpha=0.8)
-        plt.scatter(bin_id, bin_precision, s=s, alpha=0.25, c=colors[name], linewidths=0)
-
-    plt.legend(loc='best', fontsize='xx-small')
-    plt.xlabel('MapQ')
+            precision.append(tp / (tp+fp))
+            recall.append(tp / (tp+fn))
+            s.append(len(b) * scale)
+        plt.plot(recall, precision, alpha=1, label=name, c=colors[name], marker=markers[name], linewidth=0.8, markersize=2)
+        #plt.scatter(recall, precision, s=s, alpha=0.25, linewidths=0, c=colors[name])
+        # plt.gca().invert_xaxis()
+    plt.xlabel('Recall')
     plt.ylabel('Precision')
-    plt.ylim(0, 1.1)
-    plt.tight_layout()
-    plt.savefig(args.output_path + '/mapq_vs_precision.png', dpi=600)
-    #plt.show()
+    plt.legend(loc='best', fontsize='xx-small')
+    plt.savefig(args.output_path + '/Precision_Recall_aln_size.png', dpi=600)
     plt.close()
 
 
-precision_mapq(data)
+precision_recall_aln_size(benchmark_res)
+
+
+def precision_recall_read(data):
+    data2={}
+    for name,df in data.items():
+        mapq = []
+        tp = []
+        fp = []
+        fn = []
+        for i, b in df.groupby('qname'):
+            mapq.append(b['mapq'].mean())
+            tp.append(b['tp'].sum())
+            fp.append(b['fp'].sum())
+            fn.append(b['fn'].sum())
+        data2[name] = pd.DataFrame({'mapq':mapq, 'tp':tp, 'fp':fp, 'fn':fn})
+        data2 = create_bins(data2, 1, 'mapq')
+    for name, df2 in data2.items():
+        recall = []
+        precision = []
+        tp = df2['tp'].sum()
+        fp = df2['fp'].sum()
+        fn = df2['fn'].sum()
+        s = []
+        for i, b in df2.groupby('bins'):
+            if len(b) < 0:
+                continue
+            tp -= b['tp'].sum()
+            fp -= b['fp'].sum()
+            fn -= b['fn'].sum()
+            if tp + fp == 0 or tp + fn == 0:
+                continue
+            precision.append(tp / (tp+fp))
+            recall.append(tp / (tp+fn))
+            s.append(len(b) * scale)
+        plt.plot(recall, precision, alpha=1, label=name, c=colors[name], marker=markers[name], linewidth=0.8, markersize=2)
+        #plt.scatter(recall, precision, s=s, alpha=0.25, linewidths=0, c=colors[name])
+        # plt.gca().invert_xaxis()
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.legend(loc='best', fontsize='xx-small')
+    plt.savefig(args.output_path + '/Precision_Recall_read.png', dpi=600)
+    plt.close()
+
+
+precision_recall_read(benchmark_res)
 
 
 def addlabels(x,y):
@@ -205,7 +310,7 @@ mapped_alignments(data)
 def fragment_length_dist(data):
     plt.figure()
     for name, df in data.items():
-        sns.kdeplot(df['aln_size'], alpha=0.7, label = name, color=colors[name])
+        sns.kdeplot(df['aln_size'], alpha=0.7, label=name, color=colors[name])
     plt.xlabel('fragment length')
     plt.ylabel('density function')
     plt.legend(fontsize='xx-small')
@@ -228,8 +333,6 @@ markers={'bwa': 'p', 'bwa_dodi': 'P',
 def BWA_curve(data):
     # BWA-MEM plot
     for name, df in data.items():
-        if 'lastal' in name:
-            continue
         x = []
         y = []
         s=[]
@@ -261,8 +364,6 @@ BWA_curve(benchmark_res)
 def BWA_curve2(data):
     data2={}
     for name, df in data.items():
-        if 'lastal' in name:
-            continue
         mapq = []
         tp = []
         fp = []
@@ -273,17 +374,16 @@ def BWA_curve2(data):
             fp.append(b['fp'].sum())
             fn.append(b['fn'].sum())
         data2[name] = pd.DataFrame({'mapq':mapq, 'tp':tp, 'fp':fp, 'fn':fn})
+        data2 = create_bins(data2, 1, 'mapq')
     # BWA-MEM plot
     for name, df in data2.items():
-        if 'lastal' in name:
-            continue
         x = []
         y = []
         s=[]
         tp = df['tp'].sum()
         fp = df['fp'].sum()
         size = tp + fp
-        for i, b in df.groupby('mapq'):
+        for i, b in df.groupby('bins'):
             if tp+fp == 0:
                 continue
             y.append((fp+tp)/total)
@@ -336,58 +436,8 @@ def recall_aln_size(data):
 recall_aln_size(benchmark_res)
 
 
-
-def precision_recall(data):
-    data2={}
-    for name,df in data.items():
-        if 'lastal' in name:
-            continue
-        mapq = []
-        tp = []
-        fp = []
-        fn = []
-        for i, b in df.groupby('qname'):
-            mapq.append(b['mapq'].mean())
-            tp.append(b['tp'].sum())
-            fp.append(b['fp'].sum())
-            fn.append(b['fn'].sum())
-        data2[name] = pd.DataFrame({'mapq':mapq, 'tp':tp, 'fp':fp, 'fn':fn})
-    for name, df2 in data2.items():
-        recall = []
-        precision = []
-        tp = df2['tp'].sum()
-        fp = df2['fp'].sum()
-        fn = df2['fn'].sum()
-        s = []
-        for i, b in df2.groupby('mapq'):
-            if len(b) < 0:
-                continue
-
-            if tp + fp == 0 or tp + fn == 0:
-                continue
-            tp -= b['tp'].sum()
-            fp -= b['fp'].sum()
-            fn -= b['fn'].sum()
-            precision.append(tp / (tp+fp))
-            recall.append(tp / (tp+fn))
-            s.append(len(b) * scale)
-        plt.plot(recall, precision, alpha=0.8, label=name, c=colors[name])
-        plt.scatter(recall, precision, s=s, alpha=0.25, linewidths=0, c=colors[name])
-        # plt.gca().invert_xaxis()
-    plt.xlabel('Recall')
-    plt.ylabel('Precision')
-    plt.legend(loc='best', fontsize='xx-small')
-    plt.savefig(args.output_path + '/Precision-Recall.png', dpi=600)
-    plt.close()
-
-
-precision_recall(benchmark_res)
-
-
 def tp_fp(data):
     for name, df in data.items():
-        if 'lastal' in name:
-            continue
         x = []
         y = []
         s=[]
@@ -417,8 +467,6 @@ tp_fp(benchmark_res)
 def ROC(data):
     data2={}
     for name,df in data.items():
-        if 'lastal' in name:
-            continue
         mapq = []
         tp = []
         fp = []
@@ -431,6 +479,7 @@ def ROC(data):
             fn.append(b['fn'].sum())
             tn.append(total-b['tp'].sum()-b['fn'].sum()-b['fp'].sum())
         data2[name] = pd.DataFrame({'mapq':mapq, 'tp':tp, 'fp':fp, 'fn':fn, 'tn':tn})
+        data2 = create_bins(data2, 1, 'mapq')
     for name, df2 in data2.items():
         x = []
         y = []
@@ -439,10 +488,10 @@ def ROC(data):
         fp = df2['fp'].sum()
         fn = df2['fn'].sum()
         tn = df2['tn'].sum()
-        for i, b in df2.groupby('mapq'):
+        for i, b in df2.groupby('bins'):
             if tp + fp == 0 or tp + fn == 0:
                 continue
-            x.append(fp / (tn + fp))
+            x.append(fp / total)
             y.append(tp / (tp+fn))
             s.append(len(b))
             tp -= b['tp'].sum()
@@ -450,10 +499,10 @@ def ROC(data):
             fn -= b['fn'].sum()
             tn -= b['tn'].sum()
 
-        plt.plot(x, y, alpha=0.8, label=name, c=colors[name])
-        plt.scatter(x, y, s=s, alpha=0.25, linewidths=0, c=colors[name])
+        plt.plot(x, y, alpha=1, label=name, c=colors[name], marker=markers[name], linewidth=0.8, markersize=2)
+        #plt.scatter(x, y, s=s, alpha=0.25, linewidths=0, c=colors[name])
         # plt.gca().invert_xaxis()
-    plt.xlabel('False positive rate')
+    plt.xlabel('False positive / Total number of alignments')
     plt.ylabel('True positive rate')
     plt.legend(loc='best', fontsize='xx-small')
     plt.savefig(args.output_path + '/ROC.png', dpi=600)
@@ -465,11 +514,25 @@ ROC(benchmark_res)
 
 # precision - number of alignments
 def alignments_precision(data):
-    for name, df in data.items():
+    data2={}
+    for name,df in data.items():
+        mapq = []
+        tp = []
+        fp = []
+        fn = []
+        aln_diff = []
+        for i, b in df.groupby('qname'):
+            mapq.append(b['mapq'].mean())
+            tp.append(b['tp'].sum())
+            fp.append(b['fp'].sum())
+            fn.append(b['fn'].sum())
+            aln_diff.append(b['n_target'].max() - b['n_alignments'].max())
+        data2[name] = pd.DataFrame({'mapq':mapq, 'tp':tp, 'fp':fp, 'fn':fn, 'aln_diff':aln_diff})
+    for name, df2 in data2.items():
         x = []
         y = []
         s = []
-        for i, b in df.groupby('n_target'):
+        for i, b in df2.groupby('aln_diff'):
             tp = b['tp'].sum()
             fp = b['fp'].sum()
             if tp + fp == 0:
@@ -477,14 +540,15 @@ def alignments_precision(data):
             if len(b) < 5:
                 continue
             y.append(tp / (tp + fp))
-            x.append(b['n_target'].iloc[0])
+            x.append(b['aln_diff'].iloc[0])
             s.append(len(b) * scale)
 
         plt.plot(x, y, alpha=0.8, label=name, c=colors[name])
         plt.scatter(x, y, s=s, alpha=0.25, linewidths=0, c=colors[name])
 
     plt.ylabel('Precision')
-    plt.xlabel('Expected alignments')
+    plt.xlabel('Expected alignments - Mapped alignments')
+    plt.legend(loc='best', fontsize='xx-small')
     plt.savefig(args.output_path + '/expected_alns_precision.png', dpi=600)
     plt.close()
 
@@ -494,11 +558,25 @@ alignments_precision(benchmark_res)
 
 
 def alignments_recall(data):
+    data2 = {}
     for name, df in data.items():
+        mapq = []
+        tp = []
+        fp = []
+        fn = []
+        aln_diff = []
+        for i, b in df.groupby('qname'):
+            mapq.append(b['mapq'].mean())
+            tp.append(b['tp'].sum())
+            fp.append(b['fp'].sum())
+            fn.append(b['fn'].sum())
+            aln_diff.append(b['n_target'].max() - b['n_alignments'].max())
+        data2[name] = pd.DataFrame({'mapq': mapq, 'tp': tp, 'fp': fp, 'fn': fn, 'aln_diff': aln_diff})
+    for name, df2 in data2.items():
         x = []
         y = []
         s = []
-        for i, b in df.groupby('n_target'):
+        for i, b in df2.groupby('aln_diff'):
             tp = b['tp'].sum()
             fn = b['fn'].sum()
             if tp + fn == 0:
@@ -506,14 +584,15 @@ def alignments_recall(data):
             if len(b) < 5:
                 continue
             y.append(tp / (tp + fn))
-            x.append(b['n_target'].iloc[0])
+            x.append(b['aln_diff'].iloc[0])
             s.append(len(b) * scale)
 
         plt.plot(x, y, alpha=0.8, label=name, c=colors[name])
         plt.scatter(x, y, s=s, alpha=0.25, linewidths=0, c=colors[name])
 
     plt.ylabel('Recall')
-    plt.xlabel('Expected alignments')
+    plt.xlabel('Expected alignments - Mapped alignments')
+    plt.legend(loc='best', fontsize='xx-small')
     plt.savefig(args.output_path + '/expected_alns_recall.png', dpi=600)
     plt.close()
 

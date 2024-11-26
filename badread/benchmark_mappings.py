@@ -168,7 +168,6 @@ def analyse_ins_numbers(df, ins_events, prefix, n):
     df_fn.sort_values(['qname', 'qstart'])
     numeric_cols = df_fn.select_dtypes(include=['number'])
     df_fn[numeric_cols.columns] = numeric_cols.astype(int)
-    df_fn.to_csv(prefix + 'benchmark_res_fn.csv', sep='\t', index=False)
 
     d = df[df['alns'] == 1]
     assert (len(d) == df_res['tp'].sum() + df_res['fp'].sum())
@@ -179,7 +178,7 @@ def analyse_ins_numbers(df, ins_events, prefix, n):
 
     with open(prefix + 'stats.txt', 'w') as st:
         st.write('precision\trecall\tf-score\tquery_n\ttarget_n\n')
-        st.write(f'{prec}\t{recall}\t{f}\t{len(d)}\tn\n')
+        st.write(f'{prec}\t{recall}\t{f}\t{len(d)}\t{n}\n')
     d.to_csv(prefix + 'mappings_labelled.csv', sep='\t', index=False)
 
 
@@ -213,6 +212,7 @@ def analyse_ins_numbers(df, ins_events, prefix, n):
 
     plt.plot(bin_id, bin_precison, alpha=0.8)
     plt.scatter(bin_id, bin_precison, s=s, alpha=0.25, linewidths=0)
+    plt.xscale("log")
     plt.xlabel('Alignment size')
     plt.ylabel('Precision')
     plt.ylim(0, 1.1)
@@ -249,13 +249,13 @@ def analyse_ins_numbers(df, ins_events, prefix, n):
     fp = 0
     s_fp=[]
     for bid, b in d.groupby('bins'):
-        bin_fp.append(fp / n)
+        bin_fp.append(fp / n * 100)
         bin.append(bid)
         fp += b['fp'].sum()
         s_fp.append(len(b)*scale)
 
     plt.plot(bin, bin_fp)
-    plt.scatter(bin, bin_fp, s=s_fp, alpha=0.5, linewidths=0)
+    plt.scatter(bin, bin_fp, s=s_fp, alpha=0.25, linewidths=0)
     plt.xlabel('Alignment size')
     plt.ylabel('False positive %')
     plt.tight_layout()
@@ -283,11 +283,31 @@ def analyse_ins_numbers(df, ins_events, prefix, n):
     plt.close()
 
 
-    # precision - recall curve (aln size)
     bins=[]
     for i in df_fn['aln_size']:
         bins.append(base * round(i/base))  # round to nearest 50
     df_fn = df_fn.assign(bins=bins)
+
+    bin_wrong = []
+    bin_w = []
+    wrong = 0
+    s=[]
+    for bid, b in df_fn.groupby('bins'):
+        bin_wrong.append(wrong / n)
+        bin_w.append(bid)
+        wrong += b['fn'].sum()
+        s.append(len(b)*scale)
+
+    plt.plot(bin_w, bin_wrong)
+    plt.scatter(bin_w, bin_wrong, s=s, alpha=0.25, linewidths=0)
+    plt.xlabel('MapQ')
+    plt.ylabel('False negative %')
+    plt.tight_layout()
+    plt.savefig(prefix + 'fn_bins.png', dpi=600)
+    plt.close()
+
+
+    # precision - recall curve (aln size)
     recall = []
     precision = []
     tp = 0
@@ -300,8 +320,6 @@ def analyse_ins_numbers(df, ins_events, prefix, n):
         fn += b['fn'].sum()
         if tp+fp == 0 or tp+fn == 0:
             continue
-        if len(b) < 10:
-            continue
         precision.append(tp/(tp+fp))
         recall.append(tp/(tp+fn))
         s.append(len(b)*scale)
@@ -311,49 +329,6 @@ def analyse_ins_numbers(df, ins_events, prefix, n):
     plt.xlabel('Recall')
     plt.ylabel('Precision')
     plt.savefig(prefix + 'Precision-Recall.png', dpi=600)
-    plt.close()
-
-    # BWA-MEM plot
-    x = []
-    y = []
-    s=[]
-    tp = df_fn['tp'].sum()
-    fp = df_fn['fp'].sum()
-    for i, b in df_fn.groupby('bins'):
-        if tp+fp == 0:
-            continue
-        y.append((fp+tp)/n)
-        x.append(fp/(tp+fp))
-        s.append(len(b)*scale)
-        tp -= b['tp'].sum()
-        fp -= b['fp'].sum()
-    plt.plot(x, y, alpha=0.8)
-    plt.scatter(x, y, s=s, alpha=0.25, linewidths=0)
-    plt.ylabel('tp+fp/total')
-    plt.xlabel('fp/tp+fp')
-    plt.savefig(prefix + 'bwamempaper_aln_size.png', dpi=600)
-    plt.close()
-
-
-    # BWA-MEM plot
-    x = []
-    y = []
-    s=[]
-    tp = df_fn['tp'].sum()
-    fp = df_fn['fp'].sum()
-    for i, b in df_fn.groupby('mapq'):
-        if tp+fp == 0:
-            continue
-        y.append(tp/n)
-        x.append(fp/n)
-        s.append(len(b)*scale)
-        tp -= b['tp'].sum()
-        fp -= b['fp'].sum()
-    plt.plot(x, y, alpha=0.8)
-    plt.scatter(x, y, s=s, alpha=0.25, linewidths=0)
-    plt.ylabel('tp/total')
-    plt.xlabel('fp/total')
-    plt.savefig(prefix + 'tp_fp_mapq.png', dpi=600)
     plt.close()
 
 
@@ -421,6 +396,7 @@ def analyse_ins_numbers(df, ins_events, prefix, n):
     plt.savefig(prefix + 'expected_alns_precision.png', dpi=600)
     plt.close()
 
+    return df_fn
 
 def expected_mappings_per_read(prefix, ins_events):
     expect = []
@@ -441,15 +417,41 @@ def expected_mappings_per_read(prefix, ins_events):
     plt.close()
 
 
-def find_duplications(ins_events):
+def find_duplications(ins_events, df_fn, prefix):
     duplication = []
+    translocation = []
+    deletion = []
+    insertion = []
     for idx, qname in ins_events.items():
         e = ins_events[idx]
         target_ins_alns = e.get_ins_blocks()
-        for l in range(1, len(target_ins_alns)):
-            if target_ins_alns[l][0] == target_ins_alns[l-1][0] and abs(target_ins_alns[l][1] - target_ins_alns[l-1][2]) < 50:
+        for l in range(0, len(target_ins_alns)-1):
+            if target_ins_alns[l][0] == target_ins_alns[l+1][0] and abs(target_ins_alns[l+1][1] - target_ins_alns[l][2]) < 50:
                 duplication.append(idx)
-    print(duplication)
+            if target_ins_alns[l][0] != target_ins_alns[l+1][0]:
+                translocation.append(idx)
+            if target_ins_alns[l][0] == target_ins_alns[l+1][0] and abs(target_ins_alns[l][2] - target_ins_alns[l+1][1]) < 1000:
+                deletion.append(idx)
+        if len(target_ins_alns) == 3:
+            for l in range(0, len(target_ins_alns) - 2):
+                if target_ins_alns[l][0] == target_ins_alns[l+2][0] and abs(target_ins_alns[l][2] - target_ins_alns[l+1][1]) < 1000:
+                    insertion.append(idx)
+    df_fn['duplication'] = 0
+    df_fn['translocation'] = 0
+    df_fn['deletion'] = 0
+    df_fn['insertion'] = 0
+    df_fn.loc[df_fn['qname'].isin(duplication), 'duplication'] = 1
+    df_fn.loc[df_fn['qname'].isin(translocation), 'translocation'] = 1
+    df_fn.loc[df_fn['qname'].isin(deletion), 'deletion'] = 1
+    df_fn.loc[df_fn['qname'].isin(insertion), 'insertion'] = 1
+
+    print('duplications: ', len(duplication))
+    print('translocations: ', len(translocation))
+    print('deletions: ', len(deletion))
+    print('insertions: ', len(insertion))
+
+    df_fn.to_csv(prefix + 'benchmark_res_fn.csv', sep='\t', index=False)
+
 
 def benchmark_mappings(args):
     table = pd.read_csv(args.query, sep='\t')
@@ -465,5 +467,5 @@ def benchmark_mappings(args):
     ins_events, n = load_frag_info(args.target)
     print('Expected number of fragments: ', n)
     expected_mappings_per_read(prefix, ins_events)
-    analyse_ins_numbers(table, ins_events, prefix, n)
-    #find_duplications(ins_events)
+    df_fn = analyse_ins_numbers(table, ins_events, prefix, n)
+    find_duplications(ins_events, df_fn, prefix)
