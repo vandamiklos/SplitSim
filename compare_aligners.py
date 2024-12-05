@@ -29,6 +29,14 @@ colors = {'bwa': '#e69f00', 'bwa_dodi': 'firebrick',
           'vacmap_r': '#d55e00', 'vacmap_s': 'magenta'}
 
 
+markers={'bwa': 'p', 'bwa_dodi': 'P',
+          'bwa_flags': '.', 'bwa_flags_dodi': 'o',
+          'bwa_x': '*',
+          'minimap2': 'x', 'minimap2_dodi': 'X',
+          'lastalsplit': 'P', 'lastal_dodi':'+',
+          'ngmlr': 'd', 'ngmlr_x': 'D',
+          'vacmap_r': 'h', 'vacmap_s': 'H'}
+
 scale = 0.01
 
 
@@ -46,19 +54,25 @@ if 'short' in args.input_path:
     cutoff = 600
     title = 'short'
     #total = 99127 # nanopore
-    total = 98965 # nanopore one chr
+    #total = 98965 # nanopore one chr
+    total = 100920  # pacbio
+    # total =  # pacbio one chr
 if 'medium' in args.input_path:
     base = 25
     cutoff = 1200
     title = 'medium'
-    #total = 99844
-    total = 98511 # nanopore one chr
+    #total = 99844 # nanopore
+    #total = 98511 # nanopore one chr
+    total = 99155 # pacbio
+    # total =  # pacbio one chr
 if 'long' in args.input_path:
     cutoff = 1500
     base = 25
     title = 'long'
-    #total = 97333
-    total = 97737 # nanopore one chr
+    #total = 97333 # nanopore
+    #total = 97737 # nanopore one chr
+    total = 99429 # pacbio
+    # total =  # pacbio one chr
 
 data = create_bins(data, base, 'aln_size')
 benchmark_res = create_bins(benchmark_res, base, 'aln_size')
@@ -203,36 +217,6 @@ wrong_plot_bins2(benchmark_res)
 
 
 
-def precision_recall_aln_size(data):
-    for name, df in data.items():
-        recall = []
-        precision = []
-        tp = df['tp'].sum()
-        fp = df['fp'].sum()
-        fn = df['fn'].sum()
-        s = []
-        for i, b in df.groupby('bins'):
-            tp -= b['tp'].sum()
-            fp -= b['fp'].sum()
-            fn -= b['fn'].sum()
-            if tp + fp == 0 or tp + fn == 0:
-                continue
-            precision.append(tp / (tp+fp))
-            recall.append(tp / (tp+fn))
-            s.append(len(b) * scale)
-        plt.plot(recall, precision, alpha=1, label=name, c=colors[name], marker=markers[name], linewidth=0.8, markersize=2)
-        #plt.scatter(recall, precision, s=s, alpha=0.25, linewidths=0, c=colors[name])
-        # plt.gca().invert_xaxis()
-    plt.xlabel('Recall')
-    plt.ylabel('Precision')
-    plt.legend(loc='best', fontsize='xx-small')
-    plt.savefig(args.output_path + '/Precision_Recall_aln_size.png', dpi=600)
-    plt.close()
-
-
-precision_recall_aln_size(benchmark_res)
-
-
 def precision_recall_read(data):
     data2={}
     for name,df in data.items():
@@ -250,23 +234,18 @@ def precision_recall_read(data):
     for name, df2 in data2.items():
         recall = []
         precision = []
-        tp = df2['tp'].sum()
-        fp = df2['fp'].sum()
-        fn = df2['fn'].sum()
-        s = []
+        tp = 0
+        fp = 0
+        fn = 0
         for i, b in df2.groupby('bins'):
-            if len(b) < 0:
-                continue
-            tp -= b['tp'].sum()
-            fp -= b['fp'].sum()
-            fn -= b['fn'].sum()
+            tp += b['tp'].sum()
+            fp += b['fp'].sum()
+            fn += b['fn'].sum()
             if tp + fp == 0 or tp + fn == 0:
                 continue
-            precision.append(tp / (tp+fp))
-            recall.append(tp / (tp+fn))
-            s.append(len(b) * scale)
+            precision.append(tp / (tp + fp))
+            recall.append(tp / (tp + fn))
         plt.plot(recall, precision, alpha=1, label=name, c=colors[name], marker=markers[name], linewidth=0.8, markersize=2)
-        #plt.scatter(recall, precision, s=s, alpha=0.25, linewidths=0, c=colors[name])
         # plt.gca().invert_xaxis()
     plt.xlabel('Recall')
     plt.ylabel('Precision')
@@ -321,15 +300,6 @@ def fragment_length_dist(data):
 fragment_length_dist(data)
 
 
-markers={'bwa': 'p', 'bwa_dodi': 'P',
-          'bwa_flags': '.', 'bwa_flags_dodi': 'o',
-          'bwa_x': '*',
-          'minimap2': 'x', 'minimap2_dodi': 'X',
-          'lastalsplit': 'P', 'lastal_dodi':'+',
-          'ngmlr': 'd', 'ngmlr_x': 'D',
-          'vacmap_r': 'h', 'vacmap_s': 'H'}
-
-
 def BWA_curve(data):
     # BWA-MEM plot
     for name, df in data.items():
@@ -338,18 +308,18 @@ def BWA_curve(data):
         s=[]
         tp = df['tp'].sum()
         fp = df['fp'].sum()
-        size = tp + fp
+        #size = tp + fp
         for i, b in df.groupby('mapq'):
             if tp + fp == 0:
                 continue
             y.append((fp+tp)/total)
             x.append(fp/(tp+fp))
-            s.append(len(b)*scale)
+            #s.append(len(b)*scale)
             tp -= b['tp'].sum()
             fp -= b['fp'].sum()
-            size -= (tp + fp)
-        plt.plot(x, y, alpha=0.8, c=colors[name], label=name)
-        plt.scatter(x, y, s=s, alpha=0.25, linewidths=0, c=colors[name])
+            #size -= (tp + fp)
+        plt.plot(x, y, alpha=0.8, c=colors[name], label=name, marker=markers[name], linewidth=0.8, markersize=2)
+        # plt.scatter(x, y, s=s, alpha=0.25, linewidths=0, c=colors[name])
 
     plt.ylabel('mapped/total')
     plt.xlabel('wrong/mapped')
@@ -382,18 +352,18 @@ def BWA_curve2(data):
         s=[]
         tp = df['tp'].sum()
         fp = df['fp'].sum()
-        size = tp + fp
+        # size = tp + fp
         for i, b in df.groupby('bins'):
             if tp+fp == 0:
                 continue
             y.append((fp+tp)/total)
             x.append(fp/(tp+fp))
-            s.append(size*scale)
+            # s.append(size*scale)
             tp -= b['tp'].sum()
             fp -= b['fp'].sum()
-            size -= tp + fp
-        plt.plot(x, y, alpha=0.8, c=colors[name], label=name)
-        plt.scatter(x, y, s=s, alpha=0.25, linewidths=0, c=colors[name])
+            # size -= tp + fp
+        plt.plot(x, y, alpha=0.8, c=colors[name], label=name, marker=markers[name], linewidth=0.8, markersize=2)
+        # plt.scatter(x, y, s=s, alpha=0.25, linewidths=0, c=colors[name])
 
     plt.ylabel('mapped/total')
     plt.xlabel('wrong/mapped')
@@ -436,34 +406,6 @@ def recall_aln_size(data):
 recall_aln_size(benchmark_res)
 
 
-def tp_fp(data):
-    for name, df in data.items():
-        x = []
-        y = []
-        s=[]
-        tp = df['tp'].sum()
-        fp = df['fp'].sum()
-        for i, b in df.groupby('mapq'):
-            if tp+fp == 0:
-                continue
-            y.append(tp/total)
-            x.append(fp/total)
-            s.append(len(b)*scale)
-            tp -= b['tp'].sum()
-            fp -= b['fp'].sum()
-        plt.plot(x, y, alpha=0.8, c=colors[name], label=name)
-        plt.scatter(x, y, s=s, alpha=0.25, linewidths=0, c=colors[name])
-
-    plt.ylabel('tp/total')
-    plt.xlabel('fp/total')
-    plt.legend(loc='best', fontsize='xx-small')
-    plt.savefig(args.output_path + '/tp_fp.png', dpi=600)
-    plt.close()
-
-
-tp_fp(benchmark_res)
-
-
 def ROC(data):
     data2={}
     for name,df in data.items():
@@ -483,25 +425,26 @@ def ROC(data):
     for name, df2 in data2.items():
         x = []
         y = []
-        s = []
-        tp = df2['tp'].sum()
-        fp = df2['fp'].sum()
-        fn = df2['fn'].sum()
-        tn = df2['tn'].sum()
+        #tp = df2['tp'].sum()
+        #fp = df2['fp'].sum()
+        #fn = df2['fn'].sum()
+        #tn = df2['tn'].sum()
+        tp = 0
+        fp = 0
+        fn = 0
+        tn = 0
         for i, b in df2.groupby('bins'):
+
+            tp += b['tp'].sum()
+            fp += b['fp'].sum()
+            fn += b['fn'].sum()
+            tn += b['tn'].sum()
             if tp + fp == 0 or tp + fn == 0:
                 continue
+
             x.append(fp / total)
             y.append(tp / (tp+fn))
-            s.append(len(b))
-            tp -= b['tp'].sum()
-            fp -= b['fp'].sum()
-            fn -= b['fn'].sum()
-            tn -= b['tn'].sum()
-
         plt.plot(x, y, alpha=1, label=name, c=colors[name], marker=markers[name], linewidth=0.8, markersize=2)
-        #plt.scatter(x, y, s=s, alpha=0.25, linewidths=0, c=colors[name])
-        # plt.gca().invert_xaxis()
     plt.xlabel('False positive / Total number of alignments')
     plt.ylabel('True positive rate')
     plt.legend(loc='best', fontsize='xx-small')
@@ -526,7 +469,7 @@ def alignments_precision(data):
             tp.append(b['tp'].sum())
             fp.append(b['fp'].sum())
             fn.append(b['fn'].sum())
-            aln_diff.append(b['n_target'].max() - b['n_alignments'].max())
+            aln_diff.append(b['n_alignments'].max() - b['n_target'].max())
         data2[name] = pd.DataFrame({'mapq':mapq, 'tp':tp, 'fp':fp, 'fn':fn, 'aln_diff':aln_diff})
     for name, df2 in data2.items():
         x = []
@@ -547,7 +490,7 @@ def alignments_precision(data):
         plt.scatter(x, y, s=s, alpha=0.25, linewidths=0, c=colors[name])
 
     plt.ylabel('Precision')
-    plt.xlabel('Expected alignments - Mapped alignments')
+    plt.xlabel('Mapped alignments - Expected alignments')
     plt.legend(loc='best', fontsize='xx-small')
     plt.savefig(args.output_path + '/expected_alns_precision.png', dpi=600)
     plt.close()
@@ -570,7 +513,7 @@ def alignments_recall(data):
             tp.append(b['tp'].sum())
             fp.append(b['fp'].sum())
             fn.append(b['fn'].sum())
-            aln_diff.append(b['n_target'].max() - b['n_alignments'].max())
+            aln_diff.append(b['n_alignments'].max() - b['n_target'].max())
         data2[name] = pd.DataFrame({'mapq': mapq, 'tp': tp, 'fp': fp, 'fn': fn, 'aln_diff': aln_diff})
     for name, df2 in data2.items():
         x = []
@@ -591,10 +534,54 @@ def alignments_recall(data):
         plt.scatter(x, y, s=s, alpha=0.25, linewidths=0, c=colors[name])
 
     plt.ylabel('Recall')
-    plt.xlabel('Expected alignments - Mapped alignments')
+    plt.xlabel('Mapped alignments - Expected alignments')
     plt.legend(loc='best', fontsize='xx-small')
     plt.savefig(args.output_path + '/expected_alns_recall.png', dpi=600)
     plt.close()
 
 
 alignments_recall(benchmark_res)
+
+
+def alignments_f_score(data):
+    data2 = {}
+    for name, df in data.items():
+        mapq = []
+        tp = []
+        fp = []
+        fn = []
+        aln_diff = []
+        for i, b in df.groupby('qname'):
+            mapq.append(b['mapq'].mean())
+            tp.append(b['tp'].sum())
+            fp.append(b['fp'].sum())
+            fn.append(b['fn'].sum())
+            aln_diff.append(b['n_alignments'].max() - b['n_target'].max())
+        data2[name] = pd.DataFrame({'mapq': mapq, 'tp': tp, 'fp': fp, 'fn': fn, 'aln_diff': aln_diff})
+    for name, df2 in data2.items():
+        x = []
+        y = []
+        s = []
+        for i, b in df2.groupby('aln_diff'):
+            tp = b['tp'].sum()
+            fn = b['fn'].sum()
+            fp = b['fp'].sum()
+            if tp + fn == 0:
+                continue
+            if len(b) < 5:
+                continue
+            y.append(tp / (tp + 0.5 * (fp + fn)))
+            x.append(b['aln_diff'].iloc[0])
+            s.append(len(b) * scale)
+
+        plt.plot(x, y, alpha=0.8, label=name, c=colors[name])
+        plt.scatter(x, y, s=s, alpha=0.25, linewidths=0, c=colors[name])
+
+    plt.ylabel('F-score')
+    plt.xlabel('Mapped alignments - Expected')
+    plt.legend(loc='best', fontsize='xx-small')
+    plt.savefig(args.output_path + '/expected_alns_f_score.png', dpi=600)
+    plt.close()
+
+
+alignments_f_score(benchmark_res)
