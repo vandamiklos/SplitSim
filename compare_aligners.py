@@ -53,30 +53,20 @@ if 'short' in args.input_path:
     base = 25
     cutoff = 600
     title = 'short'
-    #total = 99127 # nanopore
-    #total = 98965 # nanopore one chr
-    total = 100920  # pacbio
-    # total =  # pacbio one chr
 if 'medium' in args.input_path:
     base = 25
     cutoff = 1200
     title = 'medium'
-    #total = 99844 # nanopore
-    #total = 98511 # nanopore one chr
-    total = 99155 # pacbio
-    # total =  # pacbio one chr
 if 'long' in args.input_path:
     cutoff = 1500
     base = 25
     title = 'long'
-    #total = 97333 # nanopore
-    #total = 97737 # nanopore one chr
-    total = 99429 # pacbio
-    # total =  # pacbio one chr
 
 data = create_bins(data, base, 'aln_size')
 benchmark_res = create_bins(benchmark_res, base, 'aln_size')
 
+stats = pd.read_csv(args.input_path + '/' + args.aligner_name[0] + '.stats.txt', sep='\t')
+total = int(stats['target_n'].iloc[0])
 
 def precision_aln_size(data):
     for name, df in data.items():
@@ -257,6 +247,7 @@ def precision_recall_read(data):
 precision_recall_read(benchmark_res)
 
 
+
 def addlabels(x,y):
     for i in range(len(x)):
         plt.text(i, y[i], y[i], ha='center')
@@ -301,25 +292,21 @@ fragment_length_dist(data)
 
 
 def BWA_curve(data):
-    # BWA-MEM plot
+    plt.figure(figsize=(12, 6))
     for name, df in data.items():
         x = []
         y = []
-        s=[]
-        tp = df['tp'].sum()
-        fp = df['fp'].sum()
-        #size = tp + fp
-        for i, b in df.groupby('mapq'):
+        tp = 0
+        fp = 0
+        for i, b in sorted(df.groupby('mapq'), key=lambda x: x[0], reverse=True):
+            tp += b['tp'].sum()
+            fp += b['fp'].sum()
             if tp + fp == 0:
                 continue
             y.append((fp+tp)/total)
             x.append(fp/(tp+fp))
-            #s.append(len(b)*scale)
-            tp -= b['tp'].sum()
-            fp -= b['fp'].sum()
-            #size -= (tp + fp)
+
         plt.plot(x, y, alpha=0.8, c=colors[name], label=name, marker=markers[name], linewidth=0.8, markersize=2)
-        # plt.scatter(x, y, s=s, alpha=0.25, linewidths=0, c=colors[name])
 
     plt.ylabel('mapped/total')
     plt.xlabel('wrong/mapped')
@@ -332,6 +319,7 @@ BWA_curve(benchmark_res)
 
 
 def BWA_curve2(data):
+    plt.figure(figsize=(12, 6))
     data2={}
     for name, df in data.items():
         mapq = []
@@ -425,10 +413,6 @@ def ROC(data):
     for name, df2 in data2.items():
         x = []
         y = []
-        #tp = df2['tp'].sum()
-        #fp = df2['fp'].sum()
-        #fn = df2['fn'].sum()
-        #tn = df2['tn'].sum()
         tp = 0
         fp = 0
         fn = 0
@@ -484,7 +468,7 @@ def alignments_precision(data):
                 continue
             y.append(tp / (tp + fp))
             x.append(b['aln_diff'].iloc[0])
-            s.append(len(b) * scale)
+            s.append(len(b)*0.1)
 
         plt.plot(x, y, alpha=0.8, label=name, c=colors[name])
         plt.scatter(x, y, s=s, alpha=0.25, linewidths=0, c=colors[name])
@@ -528,7 +512,7 @@ def alignments_recall(data):
                 continue
             y.append(tp / (tp + fn))
             x.append(b['aln_diff'].iloc[0])
-            s.append(len(b) * scale)
+            s.append(len(b)*0.1)
 
         plt.plot(x, y, alpha=0.8, label=name, c=colors[name])
         plt.scatter(x, y, s=s, alpha=0.25, linewidths=0, c=colors[name])
@@ -572,7 +556,7 @@ def alignments_f_score(data):
                 continue
             y.append(tp / (tp + 0.5 * (fp + fn)))
             x.append(b['aln_diff'].iloc[0])
-            s.append(len(b) * scale)
+            s.append(len(b)*0.1)
 
         plt.plot(x, y, alpha=0.8, label=name, c=colors[name])
         plt.scatter(x, y, s=s, alpha=0.25, linewidths=0, c=colors[name])
