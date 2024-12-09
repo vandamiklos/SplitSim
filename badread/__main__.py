@@ -65,6 +65,10 @@ def main(output=sys.stderr):
         from .simple_sv import generate_svs
         generate_svs(args)
 
+    elif args.subparser_name == 'benchmark_simple':
+        from .benchmark_simple import benchmark_simple
+        benchmark_simple(args)
+
 
 def parse_args(args):
     parser = MyParser(description=bold('SplitReadSimulator: a split-read simulator that can imitate many'
@@ -81,6 +85,7 @@ def parse_args(args):
     benchmark_mappings_subparser(subparsers)
     same_chr_subparser(subparsers)
     simple_sv_subparser(subparsers)
+    benchmark_simple_subparser(subparsers)
 
 
     longest_choice_name = max(len(c) for c in subparsers.choices)
@@ -357,6 +362,24 @@ def collect_mapping_info_subparser(subparsers):
 
 def benchmark_mappings_subparser(subparsers):
     group = subparsers.add_parser('benchmark_mappings', description='Benchmark mappings from BED file',
+                                  formatter_class=MyHelpFormatter, add_help=False)
+
+    required_args = group.add_argument_group('Required arguments')
+    required_args.add_argument('--query', type=str, required=True,
+                               help='Query mappings table to assess from collect_mapping_info (BED file)')
+    required_args.add_argument('--target', type=str, required=True,
+                               help='Target mappings to assess from generate_split_reads (FASTQ file)')
+    required_args.add_argument("--out", help="Output path")
+    required_args.add_argument("--prefix", help="Prefix for output files", type=str)
+    required_args.add_argument("--include_figures", action="store_true", help="Include figures in the output files")
+
+    other_args = group.add_argument_group('Other')
+    other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
+                            help='Show this help message and exit')
+
+
+def benchmark_simple_subparser(subparsers):
+    group = subparsers.add_parser('benchmark_simple', description='Benchmark mappings from BED file',
                                   formatter_class=MyHelpFormatter, add_help=False)
 
     required_args = group.add_argument_group('Required arguments')

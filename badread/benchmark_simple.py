@@ -54,7 +54,7 @@ def load_frag_info(pth):
     n=0
     for r in fq:
         name = r.__str__().split('\n')[0][1:]
-        if 'alignments' in name and 'junk_seq' not in name and 'random_seq' not in name:
+        if 'deletion' or 'translocation' or 'insertion' or 'duplication' or 'inversion' in name and 'junk_seq' not in name and 'random_seq' not in name:
             ie = InsEvent(name)
             ins_events[ie.qname] = ie
             n += len(ie.get_ins_blocks())
@@ -69,6 +69,7 @@ def analyse_ins_numbers(df, ins_events, prefix, n, figures):
             res.append({'expected': len(ins_events[name]), 'mapped': len(grp)})
 
     d = pd.DataFrame.from_records(res)
+    print(d.head())
     max_expect = d['expected'].max()
     u = d['expected'].unique().tolist()
     u.sort()
@@ -140,7 +141,7 @@ def analyse_ins_numbers(df, ins_events, prefix, n, figures):
                         assert fp[blockB[3]] == 0
                         fp[blockB[3]] = 1
                 all_res.append(r)
-        fn[k] = fn_alns
+            fn[k] = fn_alns
 
     fn_res=[]
     for qname, d in fn.items():
@@ -167,8 +168,9 @@ def analyse_ins_numbers(df, ins_events, prefix, n, figures):
     df_fn = pd.merge(df_fn, df_res[['qname', 'n_target']], how='left', on='qname')
     # df_fn.fillna(0, inplace=True)
     df_fn.sort_values(['qname', 'qstart'])
-    numeric_cols = df_fn.select_dtypes(include=['number'])
-    df_fn[numeric_cols.columns] = numeric_cols.astype(int)
+    # numeric_cols = df_fn.select_dtypes(include=['number'])
+    # df_fn[numeric_cols.columns] = numeric_cols.astype(int)
+    df_fn.to_csv(prefix + 'benchmark_res_fn.csv', sep='\t', index=False)
 
     d = df[df['alns'] == 1]
     assert (len(d) == df_res['tp'].sum() + df_res['fp'].sum())
@@ -397,7 +399,6 @@ def analyse_ins_numbers(df, ins_events, prefix, n, figures):
         plt.savefig(prefix + 'expected_alns_precision.png', dpi=600)
         plt.close()
 
-    return df_fn
 
 def expected_mappings_per_read(prefix, ins_events):
     expect = []
@@ -454,7 +455,7 @@ def find_duplications(ins_events, df_fn, prefix):
     df_fn.to_csv(prefix + 'benchmark_res_fn.csv', sep='\t', index=False)
 
 
-def benchmark_mappings(args):
+def benchmark_simple(args):
     table = pd.read_csv(args.query, sep='\t')
     table = table.loc[table['is_secondary'] != 1]
     table = table.drop_duplicates()
@@ -466,11 +467,13 @@ def benchmark_mappings(args):
     prefix = "/".join([args.out, prefix])
 
     ins_events, n = load_frag_info(args.target)
+
     print('Expected number of fragments: ', n)
     if args.include_figures:
         expected_mappings_per_read(prefix, ins_events)
         figures = True
     else:
         figures = False
-    df_fn = analyse_ins_numbers(table, ins_events, prefix, n, figures)
+
+    analyse_ins_numbers(table, ins_events, prefix, n, figures)
     # find_duplications(ins_events, df_fn, prefix)
