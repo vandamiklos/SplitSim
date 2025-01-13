@@ -169,6 +169,7 @@ def analyse_ins_numbers(df, ins_events, prefix, n, figures):
     df_fn.sort_values(['qname', 'qstart'])
     #numeric_cols = df_fn.select_dtypes(include=['number'])
     #df_fn[numeric_cols.columns] = numeric_cols.astype(int)
+    df_fn.to_csv(prefix + 'benchmark_res_fn.csv', sep='\t', index=False)
 
     d = df[df['alns'] == 1]
     assert (len(d) == df_res['tp'].sum() + df_res['fp'].sum())

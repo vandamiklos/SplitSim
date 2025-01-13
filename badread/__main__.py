@@ -379,7 +379,7 @@ def benchmark_mappings_subparser(subparsers):
 
 
 def benchmark_simple_subparser(subparsers):
-    group = subparsers.add_parser('benchmark_simple', description='Benchmark simple SV mappings from BED file',
+    group = subparsers.add_parser('benchmark_simple', description='Benchmark mappings from BED file',
                                   formatter_class=MyHelpFormatter, add_help=False)
 
     required_args = group.add_argument_group('Required arguments')
