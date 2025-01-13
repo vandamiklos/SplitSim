@@ -167,8 +167,8 @@ def analyse_ins_numbers(df, ins_events, prefix, n, figures):
     df_fn = pd.merge(df_fn, df_res[['qname', 'n_target']], how='left', on='qname')
     # df_fn.fillna(0, inplace=True)
     df_fn.sort_values(['qname', 'qstart'])
-    numeric_cols = df_fn.select_dtypes(include=['number'])
-    df_fn[numeric_cols.columns] = numeric_cols.astype(int)
+    #numeric_cols = df_fn.select_dtypes(include=['number'])
+    #df_fn[numeric_cols.columns] = numeric_cols.astype(int)
 
     d = df[df['alns'] == 1]
     assert (len(d) == df_res['tp'].sum() + df_res['fp'].sum())
@@ -473,4 +473,5 @@ def benchmark_mappings(args):
     else:
         figures = False
     df_fn = analyse_ins_numbers(table, ins_events, prefix, n, figures)
+    df_fn.to_csv(prefix + 'benchmark_res_fn.csv', sep='\t', index=False)
     # find_duplications(ins_events, df_fn, prefix)
