@@ -19,14 +19,13 @@ for aligner in args.aligner_name:
     data[aligner] = pd.read_csv(args.input_path + '/' + aligner + '.mappings_labelled.csv', sep='\t')
     benchmark_res[aligner] = pd.read_csv(args.input_path + '/' + aligner + '.benchmark_res_fn.csv', sep='\t')
 
-
-colors = {'bwa': '#e69f00', 'bwa_dodi': 'firebrick',
+colors = {'bwa': '#F0A430FF', 'bwa_dodi': 'firebrick',
           'bwa_flags': 'gold', 'bwa_flags_dodi': 'lightcoral',
           'bwa_x': 'red',
-          'minimap2': '#009e73', 'minimap2_dodi': 'darkgreen',
-          'lastalsplit': '#56b4e9', 'lastal_dodi':'lightblue',
-          'ngmlr': '#cc79a7', 'ngmlr_x': 'chocolate',
-          'vacmap_r': '#d55e00', 'vacmap_s': 'magenta'}
+          'minimap2': '#800000FF', 'minimap2_dodi': 'darkgreen',
+          'lastalsplit': '#1B3A54FF', 'lastal_dodi':'lightblue',
+          'ngmlr': '#205F4BFF', 'ngmlr_x': 'chocolate',
+          'vacmap_r': '#774762FF', 'vacmap_s': '#774762FF'}
 
 
 markers={'bwa': 'p', 'bwa_dodi': 'P',
@@ -85,7 +84,7 @@ def precision_aln_size(data):
         plt.plot(bin_id, bin_precision, label=name, c=colors[name], alpha=0.8)
         plt.scatter(bin_id, bin_precision, s=s, alpha=0.25, c=colors[name], linewidths=0)
 
-    plt.legend(loc='best', fontsize='xx-small')
+    plt.legend(loc='best', fontsize='xx-small', frameon=False, ncol=5)
     plt.xscale("log")
     plt.xlabel('Alignment size')
     plt.ylabel('Precision')

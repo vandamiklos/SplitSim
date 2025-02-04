@@ -339,6 +339,7 @@ def simple_sv_subparser(subparsers):
     sim_args.add_argument('--std-block-len', type=int, default='150',
                           help='Block length stdev (gamma distribution), '
                                'default: DEFAULT)')
+    sim_args.add_argument('--fix_overlap', type=float, default='0.4', help='Min overlap in duplications')
 
     other_args = group.add_argument_group('Other')
     other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
