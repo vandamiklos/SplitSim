@@ -90,7 +90,47 @@ def generate_translocation(args, ref, n_seqs, frag_lengths):
         print(final_seq)
 
 
-def generate_inversion(args, ref, n_seqs, frag_lengths, valid_chroms):
+def generate_inversion3(args, ref, n_seqs, frag_lengths, valid_chroms):
+    chroms = valid_chroms
+    strand = ['forward', 'reverse']
+    for n in range(n_seqs):
+        c = random.choice(chroms)
+        s = random.choice(strand)
+        flen = []
+        blk = 0
+        while blk < 3:
+            f = frag_lengths.get_fragment_length()
+            if f < 15:
+                continue
+            if blk == 0:
+                if ref.get_reference_length(c) - 3*f < 0:
+                    c = random.choice(chroms)
+                    continue
+                pos = random.randint(1, ref.get_reference_length(c) - 3*f)
+            blk += 1
+            flen.append(f)
+
+        seq3 = ref.fetch(c, pos + flen[0] + flen[1], pos + flen[0] + flen[1] +flen[2]).upper()
+        seq2 = ref.fetch(c, pos + flen[0], pos + flen[0] + flen[1]).upper()
+        seq1 = ref.fetch(c, pos, pos + flen[0]).upper()
+
+        if s == 'reverse':
+            seq1 = misc.reverse_complement(seq1)
+            seq3 = misc.reverse_complement(seq3)
+        else:
+            seq2 = misc.reverse_complement(seq2)
+
+        ins_seqs = [seq1, seq2, seq3]
+        names = [f">inversion3_", f"{c}:{pos}-{pos+flen[0]}",
+                 f"{c}:{pos + flen[0]}-{pos + flen[0] + flen[1]}",
+                 f"{c}:{pos + flen[0] + flen[1]}-{pos + flen[0] + flen[1] +flen[2]}"]
+        final_seq = "".join(ins_seqs)
+        final_name = "_".join(names)
+        print(final_name)
+        print(final_seq)
+
+
+def generate_inversion2(args, ref, n_seqs, frag_lengths, valid_chroms):
     chroms = valid_chroms
     strand = ['forward', 'reverse']
     for n in range(n_seqs):
@@ -115,12 +155,11 @@ def generate_inversion(args, ref, n_seqs, frag_lengths, valid_chroms):
 
         if s == 'reverse':
             seq1 = misc.reverse_complement(seq1)
-
         else:
             seq2 = misc.reverse_complement(seq2)
 
         ins_seqs = [seq1, seq2]
-        names = [f">inversion_", f"{c}:{pos}-{pos+flen[0]}",
+        names = [f">inversion2_", f"{c}:{pos}-{pos+flen[0]}",
                  f"{c}:{pos + flen[0]}-{pos + flen[0] + flen[1]}"]
         final_seq = "".join(ins_seqs)
         final_name = "_".join(names)
@@ -170,33 +209,124 @@ def generate_insertion(args, ref, n_seqs, frag_lengths, valid_chroms):
     for n in range(n_seqs):
         c = random.choice(chroms)
         s = random.choice(strand)
+        flen = []
+        blk = 0
+        while blk < 3:
+            f = frag_lengths.get_fragment_length()
+            if f < 15:
+                continue
+            if blk == 0:
+                if ref.get_reference_length(c) - 3*f < 0:
+                    c = random.choice(chroms)
+                    continue
+                pos = random.randint(1, ref.get_reference_length(c) - 3*f)
+            blk += 1
+            flen.append(f)
 
-        f = frag_lengths.get_fragment_length()
-        if f < 15:
-            continue
-        if ref.get_reference_length(c) - 3*f < 0:
-            c = random.choice(chroms)
-            continue
-        pos = random.randint(1, ref.get_reference_length(c) - 3*f)
-
-        # random string instead of middle seq or just Ns
-        seq=ref.fetch(c, pos, pos + f).upper()
-
-        seq1 = seq[0:int(0.5*f)]
-        seq2 = seq[int(0.5*f):]
-        ins = 'random_string'
+        seq1 = ref.fetch(c, pos, pos + flen[0]).upper()
+        seq2 = ref.fetch(c, pos + flen[0], pos + flen[0] + flen[1]).upper()
+        seq3 = ref.fetch(c, pos + flen[0] + flen[1], pos + flen[0] + flen[1] + flen[2]).upper()
 
         if s == 'reverse':
             seq1 = misc.reverse_complement(seq1)
             seq2 = misc.reverse_complement(seq2)
+            seq3 = misc.reverse_complement(seq3)
 
-        seqs = [seq1, ins, seq2]
-        names = [f">insertion_", f"{c}:{pos}-{pos+0.5*f-1}", f"{c}:{ins}",
-                 f"{c}:{pos+0.5*f}-{pos + f}"]
+
+        seqs = [seq1, seq2, seq3]
+        names = [f">insertion_", f"{c}:{pos}-{pos+flen[0]}",
+                 f"{c}:{pos+flen[0]}-{pos + flen[0] + flen[1]}",
+                 f"{c}:{pos + flen[0] + flen[1]}-{pos + flen[0] + flen[1] + flen[2]}"]
         final_seq = "".join(seqs)
         final_name = "_".join(names)
         print(final_name)
         print(final_seq)
+
+
+def DNA(length):
+    DNA=''
+    for l in range(length):
+        DNA += random.choice('CGTA')
+    return DNA
+
+
+def generate_random_insertion(args, ref, n_seqs, frag_lengths, valid_chroms):
+    chroms = valid_chroms
+    strand = ['forward', 'reverse']
+    for n in range(n_seqs):
+        c = random.choice(chroms)
+        s = random.choice(strand)
+        flen = []
+        blk = 0
+        while blk < 3:
+            f = frag_lengths.get_fragment_length()
+            if f < 15:
+                continue
+            if blk == 0:
+                if ref.get_reference_length(c) - 3*f < 0:
+                    c = random.choice(chroms)
+                    continue
+                pos = random.randint(1, ref.get_reference_length(c) - 3*f)
+            blk += 1
+            flen.append(f)
+
+        seq1 = ref.fetch(c, pos, pos + flen[0]).upper()
+        seq2 = DNA(flen[1])
+        seq3 = ref.fetch(c, pos + flen[0] + flen[1], pos + flen[0] + flen[1] + flen[2]).upper()
+
+        if s == 'reverse':
+            seq1 = misc.reverse_complement(seq1)
+            seq3 = misc.reverse_complement(seq3)
+
+
+        seqs = [seq1, seq2, seq3]
+        names = [f">randominsertion_", f"{c}:{pos}-{pos+flen[0]}",
+                 f"randomchr:0-0",
+                 f"{c}:{pos + flen[0] + flen[1]}-{pos + flen[0] + flen[1] + flen[2]}"]
+        final_seq = "".join(seqs)
+        final_name = "_".join(names)
+        print(final_name)
+        print(final_seq)
+
+
+def generate_N_insertion(args, ref, n_seqs, frag_lengths, valid_chroms):
+    chroms = valid_chroms
+    strand = ['forward', 'reverse']
+    for n in range(n_seqs):
+        c = random.choice(chroms)
+        s = random.choice(strand)
+        flen = []
+        blk = 0
+        while blk < 3:
+            f = frag_lengths.get_fragment_length()
+            if f < 15:
+                continue
+            if blk == 0:
+                if ref.get_reference_length(c) - 3*f < 0:
+                    c = random.choice(chroms)
+                    continue
+                pos = random.randint(1, ref.get_reference_length(c) - 3*f)
+            blk += 1
+            flen.append(f)
+
+        seq1 = ref.fetch(c, pos, pos + flen[0]).upper()
+        seq2 = flen[1] * 'N'
+        seq3 = ref.fetch(c, pos + flen[0] + flen[1], pos + flen[0] + flen[1] + flen[2]).upper()
+
+        if s == 'reverse':
+            seq1 = misc.reverse_complement(seq1)
+            seq3 = misc.reverse_complement(seq3)
+
+
+        seqs = [seq1, seq2, seq3]
+        names = [f">ninsertion_", f"{c}:{pos}-{pos+flen[0]}",
+                 f"N:0-0",
+                 f"{c}:{pos + flen[0] + flen[1]}-{pos + flen[0] + flen[1] + flen[2]}"]
+        final_seq = "".join(seqs)
+        final_name = "_".join(names)
+        print(final_name)
+        print(final_seq)
+
 
 
 def generate_svs(args):
@@ -216,8 +346,11 @@ def generate_svs(args):
 
     generate_duplication(args, ref, args.number, frag_lengths, valid_chroms, args.fix_overlap)
     generate_deletion(args, ref, args.number, frag_lengths, valid_chroms)
+    generate_random_insertion(args, ref, args.number, frag_lengths, valid_chroms)
+    generate_N_insertion(args, ref, args.number, frag_lengths, valid_chroms)
     generate_insertion(args, ref, args.number, frag_lengths, valid_chroms)
-    generate_inversion(args, ref, args.number, frag_lengths, valid_chroms)
+    generate_inversion2(args, ref, args.number, frag_lengths, valid_chroms)
+    generate_inversion3(args, ref, args.number, frag_lengths, valid_chroms)
     generate_translocation(args, ref, args.number, frag_lengths)
 
     print(f"Done", file=sys.stderr)

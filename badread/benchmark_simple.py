@@ -84,7 +84,8 @@ def analyse_ins_numbers(df, ins_events, prefix, n, figures, type):
             sns.histplot(dd, x='mapped', ax=axes[i], discrete=True)
             axes[i].axvline(x=u[i], ls='--', color='r')
         plt.tight_layout()
-        plt.savefig(prefix + 'mappings_vs_expected.png', dpi=600)
+        plt.title(type)
+        plt.savefig(prefix + type + '_mappings_vs_expected.png', dpi=600)
         plt.close()
 
         scale = 0.01
@@ -95,7 +96,7 @@ def analyse_ins_numbers(df, ins_events, prefix, n, figures, type):
         plt.scatter(data=counts, x='expected', y='mapped', alpha=0.8, s='size', linewidths=0)
         plt.plot(line['expected'], line['mapped'], color='r', alpha=0.5, ls='--')
         plt.tight_layout()
-        plt.savefig(prefix + 'mappings_vs_expected_scatter.png', dpi=600)
+        plt.savefig(prefix + type + '_mappings_vs_expected_scatter.png', dpi=600)
         plt.close()
 
     def match_func(block_A, block_B):
@@ -159,18 +160,20 @@ def analyse_ins_numbers(df, ins_events, prefix, n, figures, type):
     df1 = pd.DataFrame.from_records(fn_res).sort_values(['qname', 'qstart'])
 
     df_res = pd.DataFrame(all_res)
-    df_res.to_csv(prefix + 'benchmark_res.csv', sep='\t', index=False)
+    df_res['type'] = type
+    df_res.to_csv(prefix + type + '_benchmark_res.csv', sep='\t', index=False)
     df['tp'] = tp
     df['fp'] = fp
     df['alns'] = ins_aln_idx
 
     df_fn = pd.concat([df1, df], axis=0, ignore_index=True)
     df_fn = pd.merge(df_fn, df_res[['qname', 'n_target']], how='left', on='qname')
+    df_fn['type'] = type
     # df_fn.fillna(0, inplace=True)
     df_fn.sort_values(['qname', 'qstart'])
     # numeric_cols = df_fn.select_dtypes(include=['number'])
     # df_fn[numeric_cols.columns] = numeric_cols.astype(int)
-    df_fn.to_csv(prefix + 'benchmark_res_fn.csv', sep='\t', index=False)
+    df_fn.to_csv(prefix + type + '_benchmark_res_fn.csv', sep='\t', index=False)
 
     d = df[df['alns'] == 1]
     assert (len(d) == df_res['tp'].sum() + df_res['fp'].sum())
@@ -179,10 +182,10 @@ def analyse_ins_numbers(df, ins_events, prefix, n, figures, type):
     f = round(2 * df_res['tp'].sum() / (2 * df_res['tp'].sum() + df_res['fn'].sum()), 4)
 
 
-    with open(prefix + 'stats.txt', 'w') as st:
+    with open(prefix + type + '_stats.txt', 'w') as st:
         st.write('type\tprecision\trecall\tf-score\tquery_n\ttarget_n\n')
-        st.write(f'{type}\{prec}\t{recall}\t{f}\t{len(d)}\t{n}\n')
-    d.to_csv(prefix + 'mappings_labelled.csv', sep='\t', index=False)
+        st.write(f'{type}\t{prec}\t{recall}\t{f}\t{len(d)}\t{n}\n')
+    d.to_csv(prefix + type + '_mappings_labelled.csv', sep='\t', index=False)
 
     if figures:
         # assess mapping accuracy by alignment length
@@ -191,7 +194,7 @@ def analyse_ins_numbers(df, ins_events, prefix, n, figures, type):
         plt.ylabel('count')
         plt.xlabel('alignment size')
         plt.tight_layout()
-        plt.savefig(prefix + 'aln_sizes.png', dpi=600)
+        plt.savefig(prefix + type + '_aln_sizes.png', dpi=600)
         # plt.show()
         plt.close()
 
@@ -220,7 +223,7 @@ def analyse_ins_numbers(df, ins_events, prefix, n, figures, type):
         plt.ylabel('Precision')
         plt.ylim(0, 1.1)
         plt.tight_layout()
-        plt.savefig(prefix + 'size_vs_precision.png', dpi=600)
+        plt.savefig(prefix + type + '_size_vs_precision.png', dpi=600)
         # plt.show()
         plt.close()
 
@@ -242,7 +245,7 @@ def analyse_ins_numbers(df, ins_events, prefix, n, figures, type):
         plt.ylabel('Precision')
         plt.ylim(0, 1.1)
         plt.tight_layout()
-        plt.savefig(prefix + 'mapq_vs_precision.png', dpi=600)
+        plt.savefig(prefix + type + '_mapq_vs_precision.png', dpi=600)
         plt.close()
 
 
@@ -262,7 +265,7 @@ def analyse_ins_numbers(df, ins_events, prefix, n, figures, type):
         plt.xlabel('Alignment size')
         plt.ylabel('False positive %')
         plt.tight_layout()
-        plt.savefig(prefix + 'aln_size_vs_wrong.png', dpi=600)
+        plt.savefig(prefix + type + '_aln_size_vs_wrong.png', dpi=600)
         plt.close()
 
 
@@ -282,7 +285,7 @@ def analyse_ins_numbers(df, ins_events, prefix, n, figures, type):
         plt.xlabel('MapQ')
         plt.ylabel('False positive %')
         plt.tight_layout()
-        plt.savefig(prefix + 'mapq_vs_fp.png', dpi=600)
+        plt.savefig(prefix + type + '_mapq_vs_fp.png', dpi=600)
         plt.close()
 
 
@@ -306,7 +309,7 @@ def analyse_ins_numbers(df, ins_events, prefix, n, figures, type):
         plt.xlabel('MapQ')
         plt.ylabel('False negative %')
         plt.tight_layout()
-        plt.savefig(prefix + 'fn_bins.png', dpi=600)
+        plt.savefig(prefix + type + '_fn_bins.png', dpi=600)
         plt.close()
 
 
@@ -331,7 +334,7 @@ def analyse_ins_numbers(df, ins_events, prefix, n, figures, type):
         # plt.gca().invert_xaxis()
         plt.xlabel('Recall')
         plt.ylabel('Precision')
-        plt.savefig(prefix + 'Precision-Recall.png', dpi=600)
+        plt.savefig(prefix + type + '_Precision-Recall.png', dpi=600)
         plt.close()
 
 
@@ -353,7 +356,7 @@ def analyse_ins_numbers(df, ins_events, prefix, n, figures, type):
         plt.scatter(x, y, s=s, alpha=0.25, linewidths=0)
         plt.ylabel('tp+fp/total')
         plt.xlabel('fp/tp+fp')
-        plt.savefig(prefix + 'bwamempaper_mapq.png', dpi=600)
+        plt.savefig(prefix + type + '_bwamempaper_mapq.png', dpi=600)
         plt.close()
 
 
@@ -375,7 +378,7 @@ def analyse_ins_numbers(df, ins_events, prefix, n, figures, type):
         plt.scatter(x, y, s=s, alpha=0.25, linewidths=0)
         plt.ylabel('tp+fp/total')
         plt.xlabel('fp/tp+fp')
-        plt.savefig(prefix + 'expected_alns_bwamem.png', dpi=600)
+        plt.savefig(prefix + type + '_expected_alns_bwamem.png', dpi=600)
         plt.close()
 
 
@@ -396,11 +399,11 @@ def analyse_ins_numbers(df, ins_events, prefix, n, figures, type):
         plt.scatter(x, y, s=s, alpha=0.25, linewidths=0)
         plt.ylabel('Precision')
         plt.xlabel('Expected alignments')
-        plt.savefig(prefix + 'expected_alns_precision.png', dpi=600)
+        plt.savefig(prefix + type + '_expected_alns_precision.png', dpi=600)
         plt.close()
 
 
-def expected_mappings_per_read(prefix, ins_events):
+def expected_mappings_per_read(prefix, ins_events, type):
     expect = []
     for i in ins_events.values():
         expect += [j[2] - j[1] for j in i.get_ins_blocks()]
@@ -408,14 +411,14 @@ def expected_mappings_per_read(prefix, ins_events):
     plt.ylabel('count')
     plt.xlabel('aln size')
     plt.tight_layout()
-    plt.savefig(prefix + 'expected_mappings_sizes.png', dpi=600)
+    plt.savefig(prefix + type + '_expected_mappings_sizes.png', dpi=600)
     plt.close()
 
     plt.hist([len(i.get_ins_blocks()) for i in ins_events.values()], bins=range(0, 15))
     plt.ylabel('count')
     plt.xlabel('aln size')
     plt.tight_layout()
-    plt.savefig(prefix + 'expected_mappings_per_read.png', dpi=600)
+    plt.savefig(prefix + type + '_expected_mappings_per_read.png', dpi=600)
     plt.close()
 
 
@@ -433,8 +436,9 @@ def benchmark_simple(args):
     ins_events, n = load_frag_info(args.target, args.type)
 
     print('Expected number of fragments: ', n)
+
     if args.include_figures:
-        expected_mappings_per_read(prefix, ins_events)
+        expected_mappings_per_read(prefix, ins_events, args.type)
         figures = True
     else:
         figures = False

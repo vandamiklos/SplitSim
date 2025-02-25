@@ -373,6 +373,7 @@ def benchmark_mappings_subparser(subparsers):
     required_args.add_argument("--out", help="Output path")
     required_args.add_argument("--prefix", help="Prefix for output files", type=str)
     required_args.add_argument("--include_figures", action="store_true", help="Include figures in the output files")
+    required_args.add_argument("--type", type=str, help="Type of SV mappings to assess")
 
     other_args = group.add_argument_group('Other')
     other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
