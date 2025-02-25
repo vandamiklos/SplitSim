@@ -16,9 +16,21 @@ args = parse.parse_args()
 data = {}
 benchmark_res={}
 
-for aligner in args.aligner_name:
-    data[aligner] = pd.read_csv(args.input_path + '/' + aligner + '.mappings_labelled.csv', sep='\t')
-    benchmark_res[aligner] = pd.read_csv(args.input_path + '/' + aligner + '.benchmark_res_fn.csv', sep='\t')
+if 'simple' in args.input_path:
+    type = args.input_path.split('/')[-1]
+    stats = pd.read_csv(args.input_path + '/' + args.aligner_name[0] + '.' + type  + '_stats.txt', sep='\t')
+    total = int(stats['target_n'].iloc[0])
+    for aligner in args.aligner_name:
+        data[aligner] = pd.read_csv(args.input_path + '/' + aligner + '.' + type + '_mappings_labelled.csv', sep='\t')
+        benchmark_res[aligner] = pd.read_csv(args.input_path + '/' + aligner + '.' + type + '_benchmark_res_fn.csv', sep='\t')
+
+
+else:
+    for aligner in args.aligner_name:
+        data[aligner] = pd.read_csv(args.input_path + '/' + aligner + '.mappings_labelled.csv', sep='\t')
+        benchmark_res[aligner] = pd.read_csv(args.input_path + '/' + aligner + '.benchmark_res_fn.csv', sep='\t')
+        stats = pd.read_csv(args.input_path + '/' + args.aligner_name[0] + '.stats.txt', sep='\t')
+        total = int(stats['target_n'].iloc[0])
 
 colors = {'bwa': '#F0A430FF', 'bwa_dodi': 'firebrick',
           'bwa_flags': 'gold', 'bwa_flags_dodi': 'lightcoral',
@@ -65,8 +77,7 @@ if 'long' in args.input_path:
 data = create_bins(data, base, 'aln_size')
 benchmark_res = create_bins(benchmark_res, base, 'aln_size')
 
-stats = pd.read_csv(args.input_path + '/' + args.aligner_name[0] + '.stats.txt', sep='\t')
-total = int(stats['target_n'].iloc[0])
+
 
 def precision_aln_size(data):
     plt.figure(figsize=(5, 4))
