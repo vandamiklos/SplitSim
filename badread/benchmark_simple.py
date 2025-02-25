@@ -48,20 +48,21 @@ class InsEvent:
         return self.blocks
 
 
-def load_frag_info(pth):
+def load_frag_info(pth, type):
     ins_events = {}
     fq = pysam.FastxFile(pth)
     n=0
     for r in fq:
         name = r.__str__().split('\n')[0][1:]
-        if 'deletion' or 'translocation' or 'insertion' or 'duplication' or 'inversion' in name and 'junk_seq' not in name and 'random_seq' not in name:
+        t = r.__str__().split()[1].split('__')[0]
+        if type == t and 'junk_seq' not in name and 'random_seq' not in name:
             ie = InsEvent(name)
             ins_events[ie.qname] = ie
             n += len(ie.get_ins_blocks())
     return ins_events, n
 
 
-def analyse_ins_numbers(df, ins_events, prefix, n, figures):
+def analyse_ins_numbers(df, ins_events, prefix, n, figures, type):
     res = []
     for k, grp in df.groupby('qname'):
         name = k.split('.')[0]
@@ -69,7 +70,6 @@ def analyse_ins_numbers(df, ins_events, prefix, n, figures):
             res.append({'expected': len(ins_events[name]), 'mapped': len(grp)})
 
     d = pd.DataFrame.from_records(res)
-    print(d.head())
     max_expect = d['expected'].max()
     u = d['expected'].unique().tolist()
     u.sort()
@@ -180,8 +180,8 @@ def analyse_ins_numbers(df, ins_events, prefix, n, figures):
 
 
     with open(prefix + 'stats.txt', 'w') as st:
-        st.write('precision\trecall\tf-score\tquery_n\ttarget_n\n')
-        st.write(f'{prec}\t{recall}\t{f}\t{len(d)}\t{n}\n')
+        st.write('type\tprecision\trecall\tf-score\tquery_n\ttarget_n\n')
+        st.write(f'{type}\{prec}\t{recall}\t{f}\t{len(d)}\t{n}\n')
     d.to_csv(prefix + 'mappings_labelled.csv', sep='\t', index=False)
 
     if figures:
@@ -419,42 +419,6 @@ def expected_mappings_per_read(prefix, ins_events):
     plt.close()
 
 
-def find_duplications(ins_events, df_fn, prefix):
-    duplication = []
-    translocation = []
-    deletion = []
-    insertion = []
-    for idx, qname in ins_events.items():
-        e = ins_events[idx]
-        target_ins_alns = e.get_ins_blocks()
-        for l in range(0, len(target_ins_alns)-1):
-            if target_ins_alns[l][0] == target_ins_alns[l+1][0] and abs(target_ins_alns[l+1][1] - target_ins_alns[l][2]) < 50:
-                duplication.append(idx)
-            if target_ins_alns[l][0] != target_ins_alns[l+1][0]:
-                translocation.append(idx)
-            if target_ins_alns[l][0] == target_ins_alns[l+1][0] and abs(target_ins_alns[l][2] - target_ins_alns[l+1][1]) < 1000:
-                deletion.append(idx)
-        if len(target_ins_alns) == 3:
-            for l in range(0, len(target_ins_alns) - 2):
-                if target_ins_alns[l][0] == target_ins_alns[l+2][0] and abs(target_ins_alns[l][2] - target_ins_alns[l+1][1]) < 1000:
-                    insertion.append(idx)
-    df_fn['duplication'] = 0
-    df_fn['translocation'] = 0
-    df_fn['deletion'] = 0
-    df_fn['insertion'] = 0
-    df_fn.loc[df_fn['qname'].isin(duplication), 'duplication'] = 1
-    df_fn.loc[df_fn['qname'].isin(translocation), 'translocation'] = 1
-    df_fn.loc[df_fn['qname'].isin(deletion), 'deletion'] = 1
-    df_fn.loc[df_fn['qname'].isin(insertion), 'insertion'] = 1
-
-    print('duplications: ', len(duplication))
-    print('translocations: ', len(translocation))
-    print('deletions: ', len(deletion))
-    print('insertions: ', len(insertion))
-
-    df_fn.to_csv(prefix + 'benchmark_res_fn.csv', sep='\t', index=False)
-
-
 def benchmark_simple(args):
     table = pd.read_csv(args.query, sep='\t')
     table = table.loc[table['is_secondary'] != 1]
@@ -466,7 +430,7 @@ def benchmark_simple(args):
         prefix += '.'
     prefix = "/".join([args.out, prefix])
 
-    ins_events, n = load_frag_info(args.target)
+    ins_events, n = load_frag_info(args.target, args.type)
 
     print('Expected number of fragments: ', n)
     if args.include_figures:
@@ -475,5 +439,4 @@ def benchmark_simple(args):
     else:
         figures = False
 
-    analyse_ins_numbers(table, ins_events, prefix, n, figures)
-    # find_duplications(ins_events, df_fn, prefix)
+    analyse_ins_numbers(table, ins_events, prefix, n, figures, args.type)

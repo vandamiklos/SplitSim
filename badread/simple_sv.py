@@ -40,10 +40,7 @@ def generate_duplication(args, ref, n_seqs, frag_lengths, valid_chroms, fix_over
 
         seq1 = ref.fetch(c, pos, pos + flen[0]).upper()
         names.append(f"{c}:{pos}-{pos + flen[0]}")
-
-
         overlap = random.uniform(fix_overlap, 1)
-
 
         if flen[0] > flen[1]:
             seq2 = ref.fetch(c, pos + flen[0] - int(overlap * flen[1]), pos + flen[0] - int(overlap * flen[1]) + flen[1]).upper()
