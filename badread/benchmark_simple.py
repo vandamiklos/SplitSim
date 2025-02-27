@@ -23,6 +23,7 @@ graphs showing:
 """
 
 import faulthandler
+import os
 faulthandler.enable()
 class InsEvent:
     def __init__(self, info):
@@ -181,10 +182,12 @@ def analyse_ins_numbers(df, ins_events, prefix, n, figures, type):
     recall = round(df_res['tp'].sum() / (df_res['tp'].sum() + df_res['fn'].sum()), 4)
     f = round(2 * df_res['tp'].sum() / (2 * df_res['tp'].sum() + df_res['fn'].sum()), 4)
 
-
-    with open(prefix + type + '_stats.txt', 'w') as st:
-        st.write('type\tprecision\trecall\tf-score\tquery_n\ttarget_n\n')
+    file_path = prefix + type + '_stats.txt'
+    with open(file_path, 'a') as st:
+        if not os.path.exists(file_path):
+            st.write('type\tprecision\trecall\tf-score\tquery_n\ttarget_n\n')  # Write header if file is new
         st.write(f'{type}\t{prec}\t{recall}\t{f}\t{len(d)}\t{n}\n')
+
     d.to_csv(prefix + type + '_mappings_labelled.csv', sep='\t', index=False)
 
     if figures:
@@ -433,14 +436,12 @@ def benchmark_simple(args):
         prefix += '.'
     prefix = "/".join([args.out, prefix])
 
-    ins_events, n = load_frag_info(args.target, args.type)
+    for t in args.type:
+        ins_events, n = load_frag_info(args.target, t)
 
-    print('Expected number of fragments: ', n)
-
-    if args.include_figures:
-        expected_mappings_per_read(prefix, ins_events, args.type)
-        figures = True
-    else:
-        figures = False
-
-    analyse_ins_numbers(table, ins_events, prefix, n, figures, args.type)
+        if args.include_figures:
+            expected_mappings_per_read(prefix, ins_events, args.type)
+            figures = True
+        else:
+            figures = False
+        analyse_ins_numbers(table, ins_events, prefix, n, figures, t)

@@ -54,7 +54,10 @@ def load_frag_info(pth):
     n=0
     for r in fq:
         name = r.__str__().split('\n')[0][1:]
-        if 'alignments' in name and 'junk_seq' not in name and 'random_seq' not in name:
+        t = r.__str__().split()[1].split('__')[0]
+        options=['alignment', 'insertion', 'deletion', 'translocation', 'ninsertion', 'randominsertion', 'inversion2',
+                 'inversion3', 'duplication']
+        if t in options and 'junk_seq' not in name and 'random_seq' not in name:
             ie = InsEvent(name)
             ins_events[ie.qname] = ie
             n += len(ie.get_ins_blocks())

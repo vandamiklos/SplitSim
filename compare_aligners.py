@@ -11,21 +11,21 @@ parse.add_argument('--output_path', help='')
 parse.add_argument('--aligner_name', help='List of aligner names',
     nargs='+',  # Accept one or more arguments
     type=str)
+parse.add_argument('--simple', action="store_true")
 args = parse.parse_args()
 
 data = {}
 benchmark_res={}
 
-if 'simple' in args.input_path:
+if args.simple:
     type = args.input_path.split('/')[-1]
-    stats = pd.read_csv(args.input_path + '/' + args.aligner_name[0] + '.' + type  + '_stats.txt', sep='\t')
+    stats = pd.read_csv(args.input_path + '/' + args.aligner_name[0] + '.' + type + '_stats.txt', sep='\t')
     total = int(stats['target_n'].iloc[0])
     for aligner in args.aligner_name:
         data[aligner] = pd.read_csv(args.input_path + '/' + aligner + '.' + type + '_mappings_labelled.csv', sep='\t')
         benchmark_res[aligner] = pd.read_csv(args.input_path + '/' + aligner + '.' + type + '_benchmark_res_fn.csv', sep='\t')
 
-
-else:
+if not args.simple:
     for aligner in args.aligner_name:
         data[aligner] = pd.read_csv(args.input_path + '/' + aligner + '.mappings_labelled.csv', sep='\t')
         benchmark_res[aligner] = pd.read_csv(args.input_path + '/' + aligner + '.benchmark_res_fn.csv', sep='\t')
@@ -76,7 +76,6 @@ if 'long' in args.input_path:
 
 data = create_bins(data, base, 'aln_size')
 benchmark_res = create_bins(benchmark_res, base, 'aln_size')
-
 
 
 def precision_aln_size(data):
@@ -166,10 +165,10 @@ def wrong_plot_bins(data):
     plt.tight_layout()
     plt.savefig(args.output_path + '/aln_size_vs_fp_bin.png', dpi=600)
     #plt.show()
-    plt.close()
+plt.close()
 
 
-wrong_plot_bins(benchmark_res)
+#wrong_plot_bins(benchmark_res)
 
 
 def wrong_plot_mapq(data):
@@ -196,7 +195,7 @@ def wrong_plot_mapq(data):
     plt.close()
 
 
-wrong_plot_mapq(benchmark_res)
+#wrong_plot_mapq(benchmark_res)
 
 
 def wrong_plot_bins2(data):
@@ -224,7 +223,7 @@ def wrong_plot_bins2(data):
     plt.close()
 
 
-wrong_plot_bins2(benchmark_res)
+#wrong_plot_bins2(benchmark_res)
 
 
 
@@ -267,7 +266,7 @@ def precision_recall_read(data):
     plt.close()
 
 
-precision_recall_read(benchmark_res)
+#precision_recall_read(benchmark_res)
 
 
 
@@ -298,7 +297,7 @@ def mapped_alignments(data):
     plt.close()
 
 
-mapped_alignments(data)
+#mapped_alignments(data)
 
 
 def fragment_length_dist(data):
@@ -385,7 +384,7 @@ def BWA_curve2(data):
     plt.close()
 
 
-BWA_curve2(benchmark_res)
+#BWA_curve2(benchmark_res)
 
 
 def recall_aln_size(data):
