@@ -60,7 +60,6 @@ def load_frag_info(pth):
     n=0
     for r in fq:
         name = r.__str__().split('\n')[0]
-        name
         # print(f"Read name: {name}")
         t = name.replace('__', ' ').split(' ')[1]
         options = ['alignment', 'insertion', 'deletion', 'translocation', 'ninsertion', 'randominsertion', 'inversion2',
@@ -79,7 +78,7 @@ def analyse_ins_numbers(df, ins_events, prefix, n, figures):
         name = name.split('.')[0]
         if name in ins_events:
             res.append({'expected': len(ins_events[name]), 'mapped': len(grp)})
-    print(res)
+
     d = pd.DataFrame.from_records(res)
     max_expect = d['expected'].max()
     u = d['expected'].unique().tolist()
@@ -475,7 +474,6 @@ def benchmark_mappings(args):
     table = table.loc[table['is_secondary'] != 1]
     table = table.drop_duplicates()
     table.reset_index(drop=True, inplace=True)
-    print(table.head())
 
     prefix = args.prefix
     if prefix[-1] != '.':
