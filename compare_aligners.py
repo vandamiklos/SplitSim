@@ -122,7 +122,7 @@ def precision_mapq(data):
         bin_id = []
         s = []
         for bid, b in df.groupby('mapq'):
-            if len(b) == 0:
+            if len(b) < 5:
                 continue
             s.append(len(b)*scale)
             bin_precision.append(b['tp'].sum() / (b['tp'].sum() + b['fp'].sum()))
@@ -297,7 +297,7 @@ def mapped_alignments(data):
     plt.close()
 
 
-#mapped_alignments(data)
+mapped_alignments(data)
 
 
 def fragment_length_dist(data):
@@ -330,8 +330,8 @@ def BWA_curve(data):
             y.append((fp+tp)/total)
             x.append(fp/(tp+fp))
 
-        plt.plot(x, y, alpha=1, c=colors[name], label=name, linewidth=1, markeredgecolor=colors[name],
-                 marker=markers[name], markerfacecolor="None", markersize=2, markeredgewidth=0.5)
+        plt.plot(x, y, alpha=1, c=colors[name], label=name, linewidth=1.5, markeredgecolor=colors[name],
+                 marker=markers[name], markerfacecolor="None", markersize=4, markeredgewidth=0.5)
     plt.ylabel('mapped/total')
     plt.xlabel('wrong/mapped')
     #plt.legend(loc='best', fontsize='xx-small')
@@ -455,7 +455,7 @@ def ROC(data):
             x.append(fp / total)
             y.append(tp / (tp+fn))
         plt.plot(x, y, alpha=1, label=name, c=colors[name], linewidth=0.8, markeredgecolor=colors[name],
-                 marker=markers[name], markerfacecolor="None", markersize=2, markeredgewidth=0.5)
+                 marker=markers[name], markerfacecolor="None", markersize=3, markeredgewidth=0.5)
     plt.xlabel('False positive / Total number of alignments')
     plt.ylabel('True positive rate')
     #plt.legend(loc='best', fontsize='xx-small')

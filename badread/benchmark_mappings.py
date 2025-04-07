@@ -30,13 +30,16 @@ class InsEvent:
         parts = info.split(' ')
         if parts[1] in ['junk_seq', 'random_seq']:
             return
-        self.qname = parts[0]
+        self.qname = parts[0][1:]
+        self.type = parts[1]
         self.ins_blocks = None
         blocks = parts[2].split('_')
         self.blocks = []
         for k in blocks:
             a = k.split(':')
             chrom = a[0]
+            if chrom in ['randomchr', 'N']:
+                continue
             start, end = a[1].split('-')
             self.blocks.append((chrom, int(start), int(end)))
         self.identity = float(parts[-1].split('=')[1][:-1])
@@ -47,17 +50,22 @@ class InsEvent:
     def get_ins_blocks(self):
         return self.blocks
 
+    def get_type(self):
+        return self.type
+
 
 def load_frag_info(pth):
     ins_events = {}
     fq = pysam.FastxFile(pth)
     n=0
     for r in fq:
-        name = r.__str__().split('\n')[0][1:]
-        t = r.__str__().split()[1].split('__')[0]
-        options=['alignment', 'insertion', 'deletion', 'translocation', 'ninsertion', 'randominsertion', 'inversion2',
+        name = r.__str__().split('\n')[0]
+        name
+        # print(f"Read name: {name}")
+        t = name.replace('__', ' ').split(' ')[1]
+        options = ['alignment', 'insertion', 'deletion', 'translocation', 'ninsertion', 'randominsertion', 'inversion2',
                  'inversion3', 'duplication']
-        if t in options and 'junk_seq' not in name and 'random_seq' not in name:
+        if t in options:
             ie = InsEvent(name)
             ins_events[ie.qname] = ie
             n += len(ie.get_ins_blocks())
@@ -67,10 +75,11 @@ def load_frag_info(pth):
 def analyse_ins_numbers(df, ins_events, prefix, n, figures):
     res = []
     for k, grp in df.groupby('qname'):
-        name = k.split('.')[0]
+        name = k.strip()
+        name = name.split('.')[0]
         if name in ins_events:
             res.append({'expected': len(ins_events[name]), 'mapped': len(grp)})
-
+    print(res)
     d = pd.DataFrame.from_records(res)
     max_expect = d['expected'].max()
     u = d['expected'].unique().tolist()
@@ -114,15 +123,18 @@ def analyse_ins_numbers(df, ins_events, prefix, n, figures):
     fn={}
     for k, grp in df.groupby('qname'):
         name = k.split('.')[0]
+        fn_alns = []
         if name in ins_events:
             e = ins_events[name]
             target_ins_alns = e.get_ins_blocks()
+            type = e.get_type()
             alns = list(zip(grp['chrom'], grp['rstart'], grp['rend'], grp.index, grp['mapq']))
+
             if target_ins_alns:
                 for ia in alns:
                     ins_aln_idx[ia[3]] = 1
-                r = {'qname': k, 'n_target': len(target_ins_alns), 'n_ins': len(alns), 'tp': 0, 'fp': 0, 'fn': 0}
-                fn_alns=[]
+                r = {'qname': k, 'n_target': len(target_ins_alns), 'n_ins': len(alns), 'tp': 0, 'fp': 0, 'fn': 0, 'type':type}
+
                 for blockA in target_ins_alns:
                     for blockB in alns:
                         if match_func(blockA, tuple(blockB)):
@@ -463,6 +475,7 @@ def benchmark_mappings(args):
     table = table.loc[table['is_secondary'] != 1]
     table = table.drop_duplicates()
     table.reset_index(drop=True, inplace=True)
+    print(table.head())
 
     prefix = args.prefix
     if prefix[-1] != '.':
@@ -471,6 +484,7 @@ def benchmark_mappings(args):
 
     ins_events, n = load_frag_info(args.target)
     print('Expected number of fragments: ', n)
+
     if args.include_figures:
         expected_mappings_per_read(prefix, ins_events)
         figures = True

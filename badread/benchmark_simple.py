@@ -68,7 +68,11 @@ def analyse_ins_numbers(df, ins_events, prefix, n, figures, type):
     for k, grp in df.groupby('qname'):
         name = k.split('.')[0]
         if name in ins_events:
-            res.append({'expected': len(ins_events[name]), 'mapped': len(grp)})
+            if 'randominsertion' or 'ninsertion' in name:
+                expected = len(ins_events[name]) - 1
+            else:
+                expected = len(ins_events[name])
+            res.append({'expected': expected, 'mapped': len(grp)})
 
     d = pd.DataFrame.from_records(res)
     max_expect = d['expected'].max()
