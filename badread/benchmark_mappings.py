@@ -189,12 +189,12 @@ def analyse_ins_numbers(df, ins_events, prefix, n, figures):
     assert (len(d) == df_res['tp'].sum() + df_res['fp'].sum())
     prec = round(df_res['tp'].sum() / (df_res['tp'].sum() + df_res['fp'].sum()), 4)
     recall = round(df_res['tp'].sum() / (df_res['tp'].sum() + df_res['fn'].sum()), 4)
-    f = round(2 * df_res['tp'].sum() / (2 * df_res['tp'].sum() + df_res['fn'].sum()), 4)
+    f = ound(2 * prec * recall / (prec + recall), 4)
 
 
     with open(prefix + 'stats.txt', 'w') as st:
-        st.write('precision\trecall\tf-score\tquery_n\ttarget_n\n')
-        st.write(f'{prec}\t{recall}\t{f}\t{len(d)}\t{n}\n')
+        st.write('type\tprecision\trecall\tf-score\tquery_n\ttarget_n\n')
+        st.write(f'all\t{prec}\t{recall}\t{f}\t{len(d)}\t{n}\n')
     d.to_csv(prefix + 'mappings_labelled.csv', sep='\t', index=False)
 
     if figures:

@@ -32,13 +32,18 @@ if not args.simple:
         stats = pd.read_csv(args.input_path + '/' + args.aligner_name[0] + '.stats.txt', sep='\t')
         total = int(stats['target_n'].iloc[0])
 
-colors = {'bwa': '#F0A430FF', 'bwa_dodi': 'firebrick',
-          'bwa_flags': 'gold', 'bwa_flags_dodi': 'lightcoral',
-          'bwa_x': 'red',
-          'minimap2': '#800000FF', 'minimap2_dodi': 'darkgreen',
-          'lastalsplit': '#1B3A54FF', 'lastal_dodi':'lightblue',
-          'ngmlr': '#205F4BFF', 'ngmlr_x': 'chocolate',
-          'vacmap_r': '#774762FF', 'vacmap_s': '#774762FF'}
+#colors = {'bwa': '#F0A430FF', 'bwa_dodi': 'firebrick',
+#          'bwa_flags': 'gold', 'bwa_flags_dodi': 'lightcoral',
+#          'bwa_x': 'red',
+#          'minimap2': '#800000FF', 'minimap2_dodi': 'darkgreen',
+#          'lastalsplit': '#1B3A54FF', 'lastal_dodi':'lightblue',
+#          'ngmlr': '#205F4BFF', 'ngmlr_x': 'chocolate',
+#          'vacmap_r': '#774762FF', 'vacmap_s': '#774762FF'}
+
+colors = {'bwa': '#F0A430FF',
+          'minimap2': '#800000FF',
+          'lastalsplit': '#1B3A54FF',
+          'ngmlr': '#205F4BFF', 'vacmap_s': '#774762FF'}
 
 
 markers={'bwa': 'o', 'bwa_dodi': 'P',
@@ -95,6 +100,7 @@ def precision_aln_size(data):
 
         plt.plot(bin_id, bin_precision, label=name, c=colors[name], alpha=0.8)
         plt.scatter(bin_id, bin_precision, s=s, alpha=0.4, c=colors[name], linewidths=0)
+        plt.locator_params(axis='x', nbins=15)
 
     #plt.legend(loc='best', fontsize='xx-small')
     plt.xscale("log")
@@ -130,6 +136,7 @@ def precision_mapq(data):
 
         plt.plot(bin_id, bin_precision, label=name, c=colors[name], alpha=0.8)
         plt.scatter(bin_id, bin_precision, s=s, alpha=0.4, c=colors[name], linewidths=0)
+        plt.locator_params(axis='x', nbins=30)
 
     #plt.legend(loc='best', fontsize='xx-small')
     plt.xlabel('MapQ')
@@ -404,6 +411,7 @@ def recall_aln_size(data):
 
         plt.plot(bin_id, bin_recall, label=name, c=colors[name], alpha=1)
         plt.scatter(bin_id, bin_recall, s=s, alpha=0.4, c=colors[name], linewidths=0)
+        plt.locator_params(axis='x', nbins=15)
 
     #plt.legend(loc='best', fontsize='xx-small')
     plt.xscale("log")

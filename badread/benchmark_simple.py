@@ -36,6 +36,8 @@ class InsEvent:
         blocks = parts[2].split('_')
         self.blocks = []
         for k in blocks:
+            if k in ("N:0-0", "randomchr:0-0"):
+                continue
             a = k.split(':')
             chrom = a[0]
             start, end = a[1].split('-')
@@ -118,6 +120,7 @@ def analyse_ins_numbers(df, ins_events, prefix, n, figures, type):
     fn={}
     for k, grp in df.groupby('qname'):
         name = k.split('.')[0]
+        fn_alns = []
         if name in ins_events:
             e = ins_events[name]
             target_ins_alns = e.get_ins_blocks()
@@ -126,7 +129,7 @@ def analyse_ins_numbers(df, ins_events, prefix, n, figures, type):
                 for ia in alns:
                     ins_aln_idx[ia[3]] = 1
                 r = {'qname': k, 'n_target': len(target_ins_alns), 'n_ins': len(alns), 'tp': 0, 'fp': 0, 'fn': 0}
-                fn_alns=[]
+
                 for blockA in target_ins_alns:
                     for blockB in alns:
                         if match_func(blockA, tuple(blockB)):
@@ -147,7 +150,7 @@ def analyse_ins_numbers(df, ins_events, prefix, n, figures, type):
                         assert fp[blockB[3]] == 0
                         fp[blockB[3]] = 1
                 all_res.append(r)
-            fn[k] = fn_alns
+        fn[k] = fn_alns
 
     fn_res=[]
     for qname, d in fn.items():
@@ -186,10 +189,11 @@ def analyse_ins_numbers(df, ins_events, prefix, n, figures, type):
     recall = round(df_res['tp'].sum() / (df_res['tp'].sum() + df_res['fn'].sum()), 4)
     f = round(2 * df_res['tp'].sum() / (2 * df_res['tp'].sum() + df_res['fn'].sum()), 4)
 
-    file_path = prefix + type + '_stats.txt'
+    file_path = prefix + 'stats.txt'
+
     with open(file_path, 'a') as st:
         if not os.path.exists(file_path):
-            st.write('type\tprecision\trecall\tf-score\tquery_n\ttarget_n\n')  # Write header if file is new
+            st.write('type\tprecision\trecall\tf-score\tquery_n\ttarget_n\n')
         st.write(f'{type}\t{prec}\t{recall}\t{f}\t{len(d)}\t{n}\n')
 
     d.to_csv(prefix + type + '_mappings_labelled.csv', sep='\t', index=False)
