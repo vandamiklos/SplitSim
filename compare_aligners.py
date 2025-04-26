@@ -100,12 +100,14 @@ def precision_aln_size_log(data):
 
         plt.plot(bin_id, bin_precision, label=name, c=colors[name], alpha=0.8)
         plt.scatter(bin_id, bin_precision, s=s, alpha=0.4, c=colors[name], linewidths=0)
+        plt.xticks(fontsize=12)
+        plt.yticks(fontsize=12)
 
     #plt.legend(loc='best', fontsize='xx-small')
     plt.xscale("log")
     plt.xticks([25, 50, 100, 150, 200, 500, 1000], [25, 50, 100, 150, 200, 500, 1000])
-    plt.xlabel('Alignment size')
-    plt.ylabel('Precision')
+    plt.xlabel('Alignment size', fontsize=16, weight='bold')
+    plt.ylabel('Precision', fontsize=16, weight='bold')
     plt.ylim(0, 1.1)
     plt.tight_layout()
     plt.savefig(args.output_path + '/size_vs_precision_log.png', dpi=600)
@@ -138,10 +140,12 @@ def precision_aln_size(data):
 
         plt.plot(bin_id, bin_precision, label=name, c=colors[name], alpha=0.8)
         plt.scatter(bin_id, bin_precision, s=s, alpha=0.4, c=colors[name], linewidths=0)
+        plt.xticks(fontsize=12)
+        plt.yticks(fontsize=12)
 
     #plt.legend(loc='best', fontsize='xx-small')
-    plt.xlabel('Alignment size')
-    plt.ylabel('Precision')
+    plt.xlabel('Alignment size', fontsize=16, weight='bold')
+    plt.ylabel('Precision', fontsize=16, weight='bold')
     plt.ylim(0, 1.1)
     plt.tight_layout()
     plt.savefig(args.output_path + '/size_vs_precision.png', dpi=600)
@@ -172,11 +176,13 @@ def precision_mapq(data):
 
         plt.plot(bin_id, bin_precision, label=name, c=colors[name], alpha=0.8)
         plt.scatter(bin_id, bin_precision, s=s, alpha=0.4, c=colors[name], linewidths=0)
-        plt.locator_params(axis='x', nbins=30)
+        plt.xticks(fontsize=12)
+        plt.yticks(fontsize=12)
+        plt.locator_params(axis='x', nbins=10)
 
     #plt.legend(loc='best', fontsize='xx-small')
-    plt.xlabel('MapQ')
-    plt.ylabel('Precision')
+    plt.xlabel('MapQ', fontsize=16, weight='bold')
+    plt.ylabel('Precision', fontsize=16, weight='bold')
     plt.ylim(0, 1.1)
     plt.tight_layout()
     plt.savefig(args.output_path + '/mapq_vs_precision.png', dpi=600)
@@ -348,8 +354,10 @@ def fragment_length_dist(data):
     plt.figure()
     for name, df in data.items():
         sns.kdeplot(df['aln_size'], alpha=0.7, label=name, color=colors[name])
-    plt.xlabel('fragment length')
-    plt.ylabel('density function')
+    plt.xlabel('fragment length', fontsize=16, weight='bold')
+    plt.ylabel('density function', fontsize=16, weight='bold')
+    plt.xticks(fontsize=12)
+    plt.yticks(fontsize=12)
     #plt.legend(fontsize='xx-small')
     plt.savefig(args.output_path + '/fragment_len_dist.png', dpi=600)
     plt.close()
@@ -375,8 +383,12 @@ def BWA_curve(data):
 
         plt.plot(x, y, alpha=1, c=colors[name], label=name, linewidth=1.5, markeredgecolor=colors[name],
                  marker=markers[name], markerfacecolor="None", markersize=4, markeredgewidth=0.5)
-    plt.ylabel('mapped/total', fontsize=12, weight='bold')
-    plt.xlabel('wrong/mapped', fontsize=12, weight='bold')
+        plt.xticks(fontsize=12)
+        plt.yticks(fontsize=12)
+
+    plt.ylabel('mapped/total', fontsize=16, weight='bold')
+    plt.xlabel('wrong/mapped', fontsize=16, weight='bold')
+    plt.locator_params(axis='x', nbins=10)
     #plt.legend(loc='best', fontsize='xx-small')
     plt.savefig(args.output_path + '/bwamempaper_mapq.png', dpi=600)
     plt.close()
@@ -447,12 +459,14 @@ def recall_aln_size_log(data):
 
         plt.plot(bin_id, bin_recall, label=name, c=colors[name], alpha=1)
         plt.scatter(bin_id, bin_recall, s=s, alpha=0.4, c=colors[name], linewidths=0)
+        plt.xticks(fontsize=12)
+        plt.yticks(fontsize=12)
 
     #plt.legend(loc='best', fontsize='xx-small')
     plt.xscale("log")
     plt.xticks([25, 50, 100, 150, 200, 500, 1000], [25, 50, 100, 150, 200, 500, 1000])
-    plt.xlabel('Alignment size')
-    plt.ylabel('Recall')
+    plt.xlabel('Alignment size', fontsize=16, weight='bold')
+    plt.ylabel('Recall', fontsize=16, weight='bold')
     plt.ylim(0, 1.1)
     plt.tight_layout()
     plt.savefig(args.output_path + '/size_vs_recall_log.png', dpi=600)
@@ -480,10 +494,12 @@ def recall_aln_size(data):
 
         plt.plot(bin_id, bin_recall, label=name, c=colors[name], alpha=1)
         plt.scatter(bin_id, bin_recall, s=s, alpha=0.4, c=colors[name], linewidths=0)
+        plt.xticks(fontsize=12)
+        plt.yticks(fontsize=12)
 
     #plt.legend(loc='best', fontsize='xx-small')
-    plt.xlabel('Alignment size')
-    plt.ylabel('Recall')
+    plt.xlabel('Alignment size', fontsize=16, weight='bold')
+    plt.ylabel('Recall', fontsize=16, weight='bold')
     plt.ylim(0, 1.1)
     plt.tight_layout()
     plt.savefig(args.output_path + '/size_vs_recall.png', dpi=600)
@@ -575,9 +591,11 @@ def alignments_precision(data):
 
         plt.plot(x, y, alpha=0.8, label=name, c=colors[name])
         plt.scatter(x, y, s=s, alpha=0.25, linewidths=0, c=colors[name])
+        plt.xticks(fontsize=12)
+        plt.yticks(fontsize=12)
 
-    plt.ylabel('Precision')
-    plt.xlabel('Mapped alignments - Expected alignments')
+    plt.ylabel('Precision', fontsize=16, weight='bold')
+    plt.xlabel('Mapped alignments - Expected alignments', fontsize=16, weight='bold')
     #plt.legend(loc='best', fontsize='xx-small')
     plt.savefig(args.output_path + '/expected_alns_precision.png', dpi=600)
     plt.close()
@@ -620,9 +638,11 @@ def alignments_recall(data):
 
         plt.plot(x, y, alpha=0.8, label=name, c=colors[name])
         plt.scatter(x, y, s=s, alpha=0.25, linewidths=0, c=colors[name])
+        plt.xticks(fontsize=12)
+        plt.yticks(fontsize=12)
 
-    plt.ylabel('Recall')
-    plt.xlabel('Mapped alignments - Expected alignments')
+    plt.ylabel('Recall', fontsize=16, weight='bold')
+    plt.xlabel('Mapped alignments - Expected alignments', fontsize=16, weight='bold')
     #plt.legend(loc='best', fontsize='xx-small')
     plt.figure(figsize=(10, 10))
     plt.savefig(args.output_path + '/expected_alns_recall.png', dpi=600)
@@ -666,9 +686,11 @@ def alignments_f_score(data):
 
         plt.plot(x, y, alpha=0.8, label=name, c=colors[name])
         plt.scatter(x, y, s=s, alpha=0.25, linewidths=0, c=colors[name])
+        plt.xticks(fontsize=12)
+        plt.yticks(fontsize=12)
 
-    plt.ylabel('F-score')
-    plt.xlabel('Mapped alignments - Expected')
+    plt.ylabel('F-score', fontsize=16, weight='bold')
+    plt.xlabel('Mapped alignments - Expected', fontsize=16, weight='bold')
     #plt.legend(loc='best', fontsize='xx-small')
     plt.savefig(args.output_path + '/expected_alns_f_score.png', dpi=600)
     plt.close()
