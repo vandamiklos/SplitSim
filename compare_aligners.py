@@ -83,6 +83,44 @@ data = create_bins(data, base, 'aln_size')
 benchmark_res = create_bins(benchmark_res, base, 'aln_size')
 
 
+def precision_aln_size_log(data):
+    plt.figure(figsize=(5, 4))
+    for name, df in data.items():
+        bin_precision = []
+        bin_id = []
+        s = []
+        for bid, b in df.groupby('bins'):
+            if bid > cutoff:
+                break
+            if (b['tp'].sum() + b['fp'].sum()) == 0:
+                continue
+            s.append(len(b)*scale)
+            bin_precision.append(b['tp'].sum() / (b['tp'].sum() + b['fp'].sum()))
+            bin_id.append(bid)
+
+        plt.plot(bin_id, bin_precision, label=name, c=colors[name], alpha=0.8)
+        plt.scatter(bin_id, bin_precision, s=s, alpha=0.4, c=colors[name], linewidths=0)
+
+    #plt.legend(loc='best', fontsize='xx-small')
+    plt.xscale("log")
+    plt.xticks([25, 50, 100, 150, 200, 500, 1000], [25, 50, 100, 150, 200, 500, 1000])
+    plt.xlabel('Alignment size')
+    plt.ylabel('Precision')
+    plt.ylim(0, 1.1)
+    plt.tight_layout()
+    plt.savefig(args.output_path + '/size_vs_precision_log.png', dpi=600)
+    #plt.show()
+    plt.close()
+
+    handles = [mpl.patches.Patch(color=colors[x], label=x) for x in colors.keys()]
+    plt.legend(handles=handles)
+    plt.gca().set_axis_off()
+    plt.savefig(args.output_path + '/legend.png', dpi=600)
+
+
+precision_aln_size_log(data)
+
+
 def precision_aln_size(data):
     plt.figure(figsize=(5, 4))
     for name, df in data.items():
@@ -100,10 +138,8 @@ def precision_aln_size(data):
 
         plt.plot(bin_id, bin_precision, label=name, c=colors[name], alpha=0.8)
         plt.scatter(bin_id, bin_precision, s=s, alpha=0.4, c=colors[name], linewidths=0)
-        plt.locator_params(axis='x', nbins=15)
 
     #plt.legend(loc='best', fontsize='xx-small')
-    plt.xscale("log")
     plt.xlabel('Alignment size')
     plt.ylabel('Precision')
     plt.ylim(0, 1.1)
@@ -304,7 +340,7 @@ def mapped_alignments(data):
     plt.close()
 
 
-mapped_alignments(data)
+#mapped_alignments(data)
 
 
 def fragment_length_dist(data):
@@ -339,8 +375,8 @@ def BWA_curve(data):
 
         plt.plot(x, y, alpha=1, c=colors[name], label=name, linewidth=1.5, markeredgecolor=colors[name],
                  marker=markers[name], markerfacecolor="None", markersize=4, markeredgewidth=0.5)
-    plt.ylabel('mapped/total')
-    plt.xlabel('wrong/mapped')
+    plt.ylabel('mapped/total', fontsize=12, weight='bold')
+    plt.xlabel('wrong/mapped', fontsize=12, weight='bold')
     #plt.legend(loc='best', fontsize='xx-small')
     plt.savefig(args.output_path + '/bwamempaper_mapq.png', dpi=600)
     plt.close()
@@ -394,6 +430,39 @@ def BWA_curve2(data):
 #BWA_curve2(benchmark_res)
 
 
+def recall_aln_size_log(data):
+    plt.figure(figsize=(5, 4))
+    for name, df in data.items():
+        bin_recall = []
+        bin_id = []
+        s = []
+        for bid, b in df.groupby('bins'):
+            if bid > cutoff:
+                break
+            if (b['tp'].sum() + b['fn'].sum()) == 0:
+                continue
+            s.append(len(b)*scale)
+            bin_recall.append(b['tp'].sum() / (b['tp'].sum() + b['fn'].sum()))
+            bin_id.append(bid)
+
+        plt.plot(bin_id, bin_recall, label=name, c=colors[name], alpha=1)
+        plt.scatter(bin_id, bin_recall, s=s, alpha=0.4, c=colors[name], linewidths=0)
+
+    #plt.legend(loc='best', fontsize='xx-small')
+    plt.xscale("log")
+    plt.xticks([25, 50, 100, 150, 200, 500, 1000], [25, 50, 100, 150, 200, 500, 1000])
+    plt.xlabel('Alignment size')
+    plt.ylabel('Recall')
+    plt.ylim(0, 1.1)
+    plt.tight_layout()
+    plt.savefig(args.output_path + '/size_vs_recall_log.png', dpi=600)
+    #plt.show()
+    plt.close()
+
+
+recall_aln_size_log(benchmark_res)
+
+
 def recall_aln_size(data):
     plt.figure(figsize=(5, 4))
     for name, df in data.items():
@@ -411,10 +480,8 @@ def recall_aln_size(data):
 
         plt.plot(bin_id, bin_recall, label=name, c=colors[name], alpha=1)
         plt.scatter(bin_id, bin_recall, s=s, alpha=0.4, c=colors[name], linewidths=0)
-        plt.locator_params(axis='x', nbins=15)
 
     #plt.legend(loc='best', fontsize='xx-small')
-    plt.xscale("log")
     plt.xlabel('Alignment size')
     plt.ylabel('Recall')
     plt.ylim(0, 1.1)
@@ -471,7 +538,7 @@ def ROC(data):
     plt.close()
 
 
-ROC(benchmark_res)
+#ROC(benchmark_res)
 
 
 # precision - number of alignments
