@@ -6,31 +6,29 @@ import numpy as np
 import seaborn as sns
 
 parse = argparse.ArgumentParser()
-parse.add_argument('--input_path', help='')
+parse.add_argument('--input_path_ont', help='')
+parse.add_argument('--input_path_pacbio', help='')
 parse.add_argument('--output_path', help='')
 parse.add_argument('--aligner_name', help='List of aligner names',
     nargs='+',  # Accept one or more arguments
     type=str)
-parse.add_argument('--simple', action="store_true")
 args = parse.parse_args()
 
 data = {}
 benchmark_res={}
 
-if args.simple:
-    type = args.input_path.split('/')[-1]
-    stats = pd.read_csv(args.input_path + '/' + args.aligner_name[0] + '.' + type + '_stats.txt', sep='\t')
-    total = int(stats['target_n'].iloc[0])
-    for aligner in args.aligner_name:
-        data[aligner] = pd.read_csv(args.input_path + '/' + aligner + '.' + type + '_mappings_labelled.csv', sep='\t')
-        benchmark_res[aligner] = pd.read_csv(args.input_path + '/' + aligner + '.' + type + '_benchmark_res_fn.csv', sep='\t')
 
-if not args.simple:
-    for aligner in args.aligner_name:
-        data[aligner] = pd.read_csv(args.input_path + '/' + aligner + '.mappings_labelled.csv', sep='\t')
-        benchmark_res[aligner] = pd.read_csv(args.input_path + '/' + aligner + '.benchmark_res_fn.csv', sep='\t')
-        stats = pd.read_csv(args.input_path + '/' + args.aligner_name[0] + '.stats.txt', sep='\t')
-        total = int(stats['target_n'].iloc[0])
+
+for aligner in args.aligner_name:
+    data[aligner + '_ont'] = pd.read_csv(args.input_path_ont + '/' + aligner + '.mappings_labelled.csv', sep='\t')
+    benchmark_res[aligner + '_ont'] = pd.read_csv(args.input_path_ont + '/' + aligner + '.benchmark_res_fn.csv', sep='\t')
+    stats_ont = pd.read_csv(args.input_path_ont + '/' + args.aligner_name[0] + '.stats.txt', sep='\t')
+    total_ont = int(stats_ont['target_n'].iloc[0])
+
+    data[aligner + '_pacbio'] = pd.read_csv(args.input_path_pacbio + '/' + aligner + '.mappings_labelled.csv', sep='\t')
+    benchmark_res[aligner + '_pacbio'] = pd.read_csv(args.input_path_pacbio + '/' + aligner + '.benchmark_res_fn.csv', sep='\t')
+    stats_pacbio = pd.read_csv(args.input_path_pacbio + '/' + args.aligner_name[0] + '.stats.txt', sep='\t')
+    total_pacbio = int(stats_pacbio['target_n'].iloc[0])
 
 #colors = {'bwa': '#F0A430FF', 'bwa_dodi': 'firebrick',
 #          'bwa_flags': 'gold', 'bwa_flags_dodi': 'lightcoral',
@@ -40,19 +38,31 @@ if not args.simple:
 #          'ngmlr': '#205F4BFF', 'ngmlr_x': 'chocolate',
 #          'vacmap_r': '#774762FF', 'vacmap_s': '#774762FF'}
 
-colors = {'bwa': '#F0A430FF',
-          'minimap2': '#800000FF',
-          'lastalsplit': '#1B3A54FF',
-          'ngmlr': '#205F4BFF', 'vacmap_s': '#774762FF'}
+# #90728FFF, #B9A0B4FF, #9D983DFF, #CECB76FF, #E15759FF, #FF9888FF, #6B6B6BFF, #BAB2AEFF, #AA8780FF, #DAB6AFFF
+colors = {'bwa_ont': '#665065FF',
+          'minimap2_ont': '#666328FF',
+          'lastalsplit_ont': '#c82426FF',
+          'ngmlr_ont': '#303848FF',
+          'vacmap_s_ont': '#664a45FF',
+          'bwa_pacbio': '#B9A0B4FF',
+          'minimap2_pacbio': '#CECB76FF',
+          'lastalsplit_pacbio': '#FF9888FF',
+          'ngmlr_pacbio': '#5a6884FF',
+          'vacmap_s_pacbio': '#946b63FF'
+          }
 
 
-markers={'bwa': 'o', 'bwa_dodi': 'P',
-          'bwa_flags': '.', 'bwa_flags_dodi': 'o',
-          'bwa_x': '*',
-          'minimap2': 'x', 'minimap2_dodi': 'X',
-          'lastalsplit': '+', 'lastal_dodi':'P',
-          'ngmlr': 'p', 'ngmlr_x': 'p',
-          'vacmap_r': 's', 'vacmap_s': 's'}
+markers={'bwa_ont': 'o',
+          'minimap2_ont': 'x',
+          'lastalsplit_ont': '+',
+          'ngmlr_ont': 'p',
+          'vacmap_s_ont': 's',
+          'bwa_pacbio': 'o',
+          'minimap2_pacbio': 'x',
+          'lastalsplit_pacbio': '+',
+          'ngmlr_pacbio': 'p',
+          'vacmap_s_pacbio': 's'
+          }
 
 scale = 0.01
 
@@ -66,21 +76,8 @@ def create_bins(dict, base, column):
     return dict
 
 
-if 'short' in args.input_path:
-    base = 25
-    cutoff = 600
-    title = 'short'
-if 'medium' in args.input_path:
-    base = 25
-    cutoff = 1200
-    title = 'medium'
-if 'long' in args.input_path:
-    cutoff = 1500
-    base = 25
-    title = 'long'
-
-data = create_bins(data, base, 'aln_size')
-benchmark_res = create_bins(benchmark_res, base, 'aln_size')
+data = create_bins(data, 25, 'aln_size')
+benchmark_res = create_bins(benchmark_res, 25, 'aln_size')
 
 
 def precision_aln_size_log(data):
@@ -90,8 +87,6 @@ def precision_aln_size_log(data):
         bin_id = []
         s = []
         for bid, b in df.groupby('bins'):
-            if bid > cutoff:
-                break
             if (b['tp'].sum() + b['fp'].sum()) == 0:
                 continue
             s.append(len(b)*scale)
@@ -105,10 +100,12 @@ def precision_aln_size_log(data):
 
     #plt.legend(loc='best', fontsize='xx-small')
     plt.xscale("log")
+    plt.grid()
     plt.xticks([25, 50, 100, 150, 300, 500, 1000], [25, 50, 100, 150, 300, 500, 1000])
     plt.xlabel('Alignment size', fontsize=13, weight='bold')
     plt.ylabel('Precision', fontsize=13, weight='bold')
     plt.ylim(0, 1.1)
+    plt.xlim(0, 1000)
     plt.tight_layout()
     plt.savefig(args.output_path + '/size_vs_precision_log.png', dpi=600)
     #plt.show()
@@ -121,44 +118,6 @@ def precision_aln_size_log(data):
 
 
 #precision_aln_size_log(data)
-
-
-def precision_aln_size(data):
-    plt.figure(figsize=(5, 4))
-    for name, df in data.items():
-        bin_precision = []
-        bin_id = []
-        s = []
-        for bid, b in df.groupby('bins'):
-            if bid > cutoff:
-                break
-            if (b['tp'].sum() + b['fp'].sum()) == 0:
-                continue
-            s.append(len(b)*scale)
-            bin_precision.append(b['tp'].sum() / (b['tp'].sum() + b['fp'].sum()))
-            bin_id.append(bid)
-
-        plt.plot(bin_id, bin_precision, label=name, c=colors[name], alpha=0.8)
-        plt.scatter(bin_id, bin_precision, s=s, alpha=0.4, c=colors[name], linewidths=0)
-        plt.xticks(fontsize=12)
-        plt.yticks(fontsize=12)
-
-    #plt.legend(loc='best', fontsize='xx-small')
-    plt.xlabel('Alignment size', fontsize=3, weight='bold')
-    plt.ylabel('Precision', fontsize=13, weight='bold')
-    plt.ylim(0, 1.1)
-    plt.tight_layout()
-    plt.savefig(args.output_path + '/size_vs_precision.png', dpi=600)
-    #plt.show()
-    plt.close()
-
-    handles = [mpl.patches.Patch(color=colors[x], label=x) for x in colors.keys()]
-    plt.legend(handles=handles)
-    plt.gca().set_axis_off()
-    plt.savefig(args.output_path + '/legend.png', dpi=600)
-
-
-#precision_aln_size(data)
 
 
 def precision_mapq(data):
@@ -183,6 +142,7 @@ def precision_mapq(data):
     #plt.legend(loc='best', fontsize='xx-small')
     plt.xlabel('MapQ', fontsize=13, weight='bold')
     plt.ylabel('Precision', fontsize=13, weight='bold')
+    plt.grid()
     plt.ylim(0, 1.1)
     plt.tight_layout()
     plt.savefig(args.output_path + '/mapq_vs_precision.png', dpi=600)
@@ -191,133 +151,6 @@ def precision_mapq(data):
 
 
 #precision_mapq(data)
-
-
-def wrong_plot_bins(data):
-    plt.figure(figsize=(5, 4))
-    for name, df in data.items():
-        bin_wrong = []
-        bin_w = []
-        wrong = 0
-        s=[]
-        for bid, b in df.groupby('bins'):
-            bin_wrong.append(wrong / total * 100)
-            bin_w.append(bid)
-            wrong += b['fp'].sum()
-            s.append(len(b) * scale)
-        plt.plot(bin_w, bin_wrong, label=name, c=colors[name], alpha=0.8)
-        plt.scatter(bin_w, bin_wrong, s=s, alpha=0.4, c=colors[name], linewidths=0)
-    #plt.legend(loc='best', fontsize='xx-small')
-    #plt.xscale("log")
-    plt.xlabel('Alignment size')
-    plt.ylabel('False positive %')
-    plt.tight_layout()
-    plt.savefig(args.output_path + '/aln_size_vs_fp_bin.png', dpi=600)
-    #plt.show()
-plt.close()
-
-
-#wrong_plot_bins(benchmark_res)
-
-
-def wrong_plot_mapq(data):
-    plt.figure(figsize=(6, 4))
-    for name, df in data.items():
-        bin_wrong = []
-        bin_w = []
-        wrong = 0
-        s=[]
-        for bid, b in df.groupby('mapq'):
-            bin_wrong.append(wrong / total * 100)
-            bin_w.append(bid)
-            wrong += b['fp'].sum()
-            s.append(len(b) * scale)
-        plt.plot(bin_w, bin_wrong, label=name, c=colors[name], alpha=0.8)
-        plt.scatter(bin_w, bin_wrong, s=s, alpha=0.4, c=colors[name], linewidths=0)
-    #plt.legend(loc='best', fontsize='xx-small')
-    #plt.xscale("log")
-    plt.xlabel('Mapq')
-    plt.ylabel('False positive %')
-    plt.tight_layout()
-    plt.savefig(args.output_path + '/fp_mapq.png', dpi=600)
-    #plt.show()
-    plt.close()
-
-
-#wrong_plot_mapq(benchmark_res)
-
-
-def wrong_plot_bins2(data):
-    plt.figure(figsize=(5, 4))
-    for name, df in data.items():
-        bin_wrong = []
-        bin_w = []
-        wrong = 0
-        s=[]
-        for bid, b in df.groupby('bins'):
-            bin_wrong.append(wrong / total * 100)
-            bin_w.append(bid)
-            wrong += b['fn'].sum()
-            s.append(len(b)*scale)
-        plt.plot(bin_w, bin_wrong, label=name, c=colors[name], alpha=0.8)
-        plt.scatter(bin_w, bin_wrong, s=s, alpha=0.4, c=colors[name], linewidths=0)
-
-    #plt.legend(loc='best', fontsize='xx-small')
-    #plt.xscale("log")
-    plt.xlabel('Alignment size')
-    plt.ylabel('False negative %')
-    plt.tight_layout()
-    plt.savefig(args.output_path + '/aln_size_vs_fn_bin.png', dpi=600)
-    #plt.show()
-    plt.close()
-
-
-#wrong_plot_bins2(benchmark_res)
-
-
-
-def precision_recall_read(data):
-    plt.figure(figsize=(4, 4))
-    data2={}
-    for name,df in data.items():
-        mapq = []
-        tp = []
-        fp = []
-        fn = []
-        for i, b in df.groupby('qname'):
-            mapq.append(b['mapq'].mean())
-            tp.append(b['tp'].sum())
-            fp.append(b['fp'].sum())
-            fn.append(b['fn'].sum())
-        data2[name] = pd.DataFrame({'mapq':mapq, 'tp':tp, 'fp':fp, 'fn':fn})
-        data2 = create_bins(data2, 1, 'mapq')
-    for name, df2 in data2.items():
-        recall = []
-        precision = []
-        tp = 0
-        fp = 0
-        fn = 0
-        for i, b in df2.groupby('bins'):
-            tp += b['tp'].sum()
-            fp += b['fp'].sum()
-            fn += b['fn'].sum()
-            if tp + fp == 0 or tp + fn == 0:
-                continue
-            precision.append(tp / (tp + fp))
-            recall.append(tp / (tp + fn))
-        plt.plot(recall, precision, alpha=1, label=name, c=colors[name], linewidth=1,
-                 markeredgecolor=colors[name], marker=markers[name], markerfacecolor="None", markersize=2, markeredgewidth=0.5)
-        # plt.gca().invert_xaxis()
-    plt.xlabel('Recall')
-    plt.ylabel('Precision')
-    #plt.legend(loc='best', fontsize='xx-small')
-    plt.savefig(args.output_path + '/Precision_Recall_read.png', dpi=600)
-    plt.close()
-
-
-#precision_recall_read(benchmark_res)
-
-
 
 def addlabels(x,y):
     for i in range(len(x)):
@@ -337,7 +170,6 @@ def mapped_alignments(data):
     ax.bar(data.keys(), counts, label=data.keys(), color=c)
     addlabels(data.keys(), counts)
     ax.set_ylabel('Mapped fragments')
-    ax.set_title(title)
     #ax.legend(title='aligners', bbox_to_anchor=(0.9, 0.75))
     plt.setp(ax.get_xticklabels(), rotation=45, horizontalalignment='right')
     plt.subplots_adjust(bottom=0.2)
@@ -369,6 +201,10 @@ def fragment_length_dist(data):
 def BWA_curve(data):
     plt.figure(figsize=(5, 4))
     for name, df in data.items():
+        if 'ont' in name:
+            total = total_ont
+        else:
+            total = total_pacbio
         x = []
         y = []
         tp = 0
@@ -378,16 +214,18 @@ def BWA_curve(data):
             fp += b['fp'].sum()
             if tp + fp == 0:
                 continue
-            y.append((fp+tp)/total)
+            y.append((fp+tp)/(total))
             x.append(fp/(tp+fp))
 
         plt.plot(x, y, alpha=1, c=colors[name], label=name, linewidth=1.5, markeredgecolor=colors[name],
-                 marker=markers[name], markerfacecolor="None", markersize=4, markeredgewidth=0.5)
+                 marker=markers[name], markerfacecolor="None", markersize=6, markeredgewidth=0.5)
         plt.xticks(fontsize=12)
         plt.yticks(fontsize=12)
 
+
     plt.ylabel('mapped/total', fontsize=13, weight='bold')
     plt.xlabel('wrong/mapped', fontsize=13, weight='bold')
+    plt.grid()
     plt.locator_params(axis='x', nbins=8)
     plt.tight_layout()
     #plt.legend(loc='best', fontsize='xx-small')
@@ -398,51 +236,6 @@ def BWA_curve(data):
 #BWA_curve(benchmark_res)
 
 
-def BWA_curve2(data):
-    plt.figure(figsize=(5, 4))
-    data2={}
-    for name, df in data.items():
-        mapq = []
-        tp = []
-        fp = []
-        fn = []
-        for i, b in df.groupby('qname'):
-            mapq.append(b['mapq'].mean())
-            tp.append(b['tp'].sum())
-            fp.append(b['fp'].sum())
-            fn.append(b['fn'].sum())
-        data2[name] = pd.DataFrame({'mapq':mapq, 'tp':tp, 'fp':fp, 'fn':fn})
-        data2 = create_bins(data2, 1, 'mapq')
-    # BWA-MEM plot
-    for name, df in data2.items():
-        x = []
-        y = []
-        s=[]
-        tp = df['tp'].sum()
-        fp = df['fp'].sum()
-        size = tp + fp
-        for i, b in df.groupby('bins'):
-            if tp+fp == 0:
-                continue
-            y.append((fp+tp)/total)
-            x.append(fp/(tp+fp))
-            # s.append(size*scale)
-            tp -= b['tp'].sum()
-            fp -= b['fp'].sum()
-            # size -= tp + fp
-        plt.plot(x, y, alpha=1, c=colors[name], label=name, linewidth=1, markeredgecolor=colors[name],
-                 marker=markers[name], markerfacecolor="None", markersize=2, markeredgewidth=0.5)
-
-    plt.ylabel('mapped/total')
-    plt.xlabel('wrong/mapped')
-    #plt.legend(loc='best', fontsize='xx-small')
-    plt.savefig(args.output_path + '/bwamempaper_mapq_read.png', dpi=600)
-    plt.close()
-
-
-#BWA_curve2(benchmark_res)
-
-
 def recall_aln_size_log(data):
     plt.figure(figsize=(5, 4))
     for name, df in data.items():
@@ -450,8 +243,6 @@ def recall_aln_size_log(data):
         bin_id = []
         s = []
         for bid, b in df.groupby('bins'):
-            if bid > cutoff:
-                break
             if (b['tp'].sum() + b['fn'].sum()) == 0:
                 continue
             s.append(len(b)*scale)
@@ -468,7 +259,9 @@ def recall_aln_size_log(data):
     plt.xticks([25, 50, 100, 150, 300, 500, 1000], [25, 50, 100, 150, 300, 500, 1000])
     plt.xlabel('Alignment size', fontsize=13, weight='bold')
     plt.ylabel('Recall', fontsize=13, weight='bold')
+    plt.grid()
     plt.ylim(0, 1.1)
+    plt.xlim(0, 1000)
     plt.tight_layout()
     plt.savefig(args.output_path + '/size_vs_recall_log.png', dpi=600)
     #plt.show()
@@ -476,86 +269,6 @@ def recall_aln_size_log(data):
 
 
 #recall_aln_size_log(benchmark_res)
-
-
-def recall_aln_size(data):
-    plt.figure(figsize=(5, 4))
-    for name, df in data.items():
-        bin_recall = []
-        bin_id = []
-        s = []
-        for bid, b in df.groupby('bins'):
-            if bid > cutoff:
-                break
-            if (b['tp'].sum() + b['fn'].sum()) == 0:
-                continue
-            s.append(len(b)*scale)
-            bin_recall.append(b['tp'].sum() / (b['tp'].sum() + b['fn'].sum()))
-            bin_id.append(bid)
-
-        plt.plot(bin_id, bin_recall, label=name, c=colors[name], alpha=1)
-        plt.scatter(bin_id, bin_recall, s=s, alpha=0.4, c=colors[name], linewidths=0)
-        plt.xticks(fontsize=12)
-        plt.yticks(fontsize=12)
-
-    #plt.legend(loc='best', fontsize='xx-small')
-    plt.xlabel('Alignment size', fontsize=13, weight='bold')
-    plt.ylabel('Recall', fontsize=13, weight='bold')
-    plt.ylim(0, 1.1)
-    plt.tight_layout()
-    plt.savefig(args.output_path + '/size_vs_recall.png', dpi=600)
-    #plt.show()
-    plt.close()
-
-
-#recall_aln_size(benchmark_res)
-
-
-def ROC(data):
-    plt.figure(figsize=(4, 4))
-    data2={}
-    for name,df in data.items():
-        mapq = []
-        tp = []
-        fp = []
-        fn = []
-        tn = []
-        for i, b in df.groupby('qname'):
-            mapq.append(b['mapq'].mean())
-            tp.append(b['tp'].sum())
-            fp.append(b['fp'].sum())
-            fn.append(b['fn'].sum())
-            tn.append(total-b['tp'].sum()-b['fn'].sum()-b['fp'].sum())
-        data2[name] = pd.DataFrame({'mapq':mapq, 'tp':tp, 'fp':fp, 'fn':fn, 'tn':tn})
-        data2 = create_bins(data2, 1, 'mapq')
-    for name, df2 in data2.items():
-        x = []
-        y = []
-        tp = 0
-        fp = 0
-        fn = 0
-        tn = 0
-        for i, b in df2.groupby('bins'):
-
-            tp += b['tp'].sum()
-            fp += b['fp'].sum()
-            fn += b['fn'].sum()
-            tn += b['tn'].sum()
-            if tp + fp == 0 or tp + fn == 0:
-                continue
-
-            x.append(fp / total)
-            y.append(tp / (tp+fn))
-        plt.plot(x, y, alpha=1, label=name, c=colors[name], linewidth=0.8, markeredgecolor=colors[name],
-                 marker=markers[name], markerfacecolor="None", markersize=3, markeredgewidth=0.5)
-    plt.xlabel('False positive / Total number of alignments')
-    plt.ylabel('True positive rate')
-    #plt.legend(loc='best', fontsize='xx-small')
-    plt.savefig(args.output_path + '/ROC.png', dpi=600)
-    plt.close()
-
-
-#ROC(benchmark_res)
 
 
 # precision - number of alignments
@@ -597,13 +310,14 @@ def alignments_precision(data):
 
     plt.ylabel('Precision', fontsize=13, weight='bold')
     plt.xlabel('Mapped alignments - Expected alignments', fontsize=13, weight='bold')
+    plt.grid()
     plt.tight_layout()
     #plt.legend(loc='best', fontsize='xx-small')
     plt.savefig(args.output_path + '/expected_alns_precision.png', dpi=600)
     plt.close()
 
 
-#alignments_precision(benchmark_res)
+#(benchmark_res)
 
 
 
@@ -645,6 +359,7 @@ def alignments_recall(data):
 
     plt.ylabel('Recall', fontsize=16, weight='bold')
     plt.xlabel('Mapped alignments - Expected alignments', fontsize=16, weight='bold')
+    plt.grid()
     #plt.legend(loc='best', fontsize='xx-small')
     plt.tight_layout()
     plt.savefig(args.output_path + '/expected_alns_recall.png', dpi=600)
@@ -693,6 +408,7 @@ def alignments_f_score(data):
 
     plt.ylabel('F-score', fontsize=16, weight='bold')
     plt.xlabel('Mapped alignments - Expected', fontsize=16, weight='bold')
+    plt.grid()
     plt.tight_layout()
     #plt.legend(loc='best', fontsize='xx-small')
     plt.savefig(args.output_path + '/expected_alns_f_score.png', dpi=600)
@@ -725,8 +441,11 @@ def mapq_aln_size_log(data):
     plt.xticks([25, 50, 100, 150, 300, 500, 1000], [25, 50, 100, 150, 300, 500, 1000])
     plt.xlabel('Alignment size', fontsize=13, weight='bold')
     plt.ylabel('Mapping quality', fontsize=13, weight='bold')
+    plt.xlim(0, 1000)
+    plt.grid()
     plt.tight_layout()
     plt.savefig(args.output_path + '/size_vs_mapq_log.png', dpi=600)
+
     #plt.show()
     plt.close()
 
@@ -736,7 +455,7 @@ def mapq_aln_size_log(data):
     plt.savefig(args.output_path + '/legend.png', dpi=600)
 
 
-mapq_aln_size_log(data)
+#mapq_aln_size_log(data)
 
 
 
@@ -748,7 +467,9 @@ def precision_recall_frag(data):
         bin_id = []
         s = []
         for bid, b in df.groupby('bins'):
-            if (b['tp'].sum() + b['fp'].sum()) == 0:
+            if (b['tp'].sum() + b['fp'].sum()) == 0 or (b['tp'].sum() + b['fn'].sum()) == 0:
+                continue
+            if len(b) < 200:
                 continue
             s.append(len(b)*scale)
             bin_precision.append(b['tp'].sum() / (b['tp'].sum() + b['fp'].sum()))
@@ -758,9 +479,13 @@ def precision_recall_frag(data):
                  markeredgecolor=colors[name], marker=markers[name], markerfacecolor="None", markersize=2, markeredgewidth=0.5)
     plt.xlabel('Recall', fontsize=13, weight='bold')
     plt.ylabel('Precision', fontsize=13, weight='bold')
-    #plt.legend(loc='best', fontsize='xx-small')
+    plt.grid()
+    plt.tight_layout()
     plt.savefig(args.output_path + '/Precision_Recall.png', dpi=600)
     plt.close()
 
 
-precision_recall_frag(benchmark_res)
+benchmark_res2 = create_bins(benchmark_res, 50, 'aln_size')
+
+
+precision_recall_frag(benchmark_res2)
