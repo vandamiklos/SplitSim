@@ -105,9 +105,9 @@ def precision_aln_size_log(data):
 
     #plt.legend(loc='best', fontsize='xx-small')
     plt.xscale("log")
-    plt.xticks([25, 50, 100, 150, 200, 500, 1000], [25, 50, 100, 150, 200, 500, 1000])
-    plt.xlabel('Alignment size', fontsize=16, weight='bold')
-    plt.ylabel('Precision', fontsize=16, weight='bold')
+    plt.xticks([25, 50, 100, 150, 300, 500, 1000], [25, 50, 100, 150, 300, 500, 1000])
+    plt.xlabel('Alignment size', fontsize=13, weight='bold')
+    plt.ylabel('Precision', fontsize=13, weight='bold')
     plt.ylim(0, 1.1)
     plt.tight_layout()
     plt.savefig(args.output_path + '/size_vs_precision_log.png', dpi=600)
@@ -120,7 +120,7 @@ def precision_aln_size_log(data):
     plt.savefig(args.output_path + '/legend.png', dpi=600)
 
 
-precision_aln_size_log(data)
+#precision_aln_size_log(data)
 
 
 def precision_aln_size(data):
@@ -144,8 +144,8 @@ def precision_aln_size(data):
         plt.yticks(fontsize=12)
 
     #plt.legend(loc='best', fontsize='xx-small')
-    plt.xlabel('Alignment size', fontsize=16, weight='bold')
-    plt.ylabel('Precision', fontsize=16, weight='bold')
+    plt.xlabel('Alignment size', fontsize=3, weight='bold')
+    plt.ylabel('Precision', fontsize=13, weight='bold')
     plt.ylim(0, 1.1)
     plt.tight_layout()
     plt.savefig(args.output_path + '/size_vs_precision.png', dpi=600)
@@ -158,7 +158,7 @@ def precision_aln_size(data):
     plt.savefig(args.output_path + '/legend.png', dpi=600)
 
 
-precision_aln_size(data)
+#precision_aln_size(data)
 
 
 def precision_mapq(data):
@@ -181,8 +181,8 @@ def precision_mapq(data):
         plt.locator_params(axis='x', nbins=10)
 
     #plt.legend(loc='best', fontsize='xx-small')
-    plt.xlabel('MapQ', fontsize=16, weight='bold')
-    plt.ylabel('Precision', fontsize=16, weight='bold')
+    plt.xlabel('MapQ', fontsize=13, weight='bold')
+    plt.ylabel('Precision', fontsize=13, weight='bold')
     plt.ylim(0, 1.1)
     plt.tight_layout()
     plt.savefig(args.output_path + '/mapq_vs_precision.png', dpi=600)
@@ -190,7 +190,7 @@ def precision_mapq(data):
     plt.close()
 
 
-precision_mapq(data)
+#precision_mapq(data)
 
 
 def wrong_plot_bins(data):
@@ -354,8 +354,8 @@ def fragment_length_dist(data):
     plt.figure()
     for name, df in data.items():
         sns.kdeplot(df['aln_size'], alpha=0.7, label=name, color=colors[name])
-    plt.xlabel('fragment length', fontsize=16, weight='bold')
-    plt.ylabel('density function', fontsize=16, weight='bold')
+    plt.xlabel('fragment length', fontsize=13, weight='bold')
+    plt.ylabel('density function', fontsize=13, weight='bold')
     plt.xticks(fontsize=12)
     plt.yticks(fontsize=12)
     #plt.legend(fontsize='xx-small')
@@ -363,7 +363,7 @@ def fragment_length_dist(data):
     plt.close()
 
 
-fragment_length_dist(data)
+#fragment_length_dist(data)
 
 
 def BWA_curve(data):
@@ -386,15 +386,16 @@ def BWA_curve(data):
         plt.xticks(fontsize=12)
         plt.yticks(fontsize=12)
 
-    plt.ylabel('mapped/total', fontsize=16, weight='bold')
-    plt.xlabel('wrong/mapped', fontsize=16, weight='bold')
-    plt.locator_params(axis='x', nbins=10)
+    plt.ylabel('mapped/total', fontsize=13, weight='bold')
+    plt.xlabel('wrong/mapped', fontsize=13, weight='bold')
+    plt.locator_params(axis='x', nbins=8)
+    plt.tight_layout()
     #plt.legend(loc='best', fontsize='xx-small')
     plt.savefig(args.output_path + '/bwamempaper_mapq.png', dpi=600)
     plt.close()
 
 
-BWA_curve(benchmark_res)
+#BWA_curve(benchmark_res)
 
 
 def BWA_curve2(data):
@@ -464,9 +465,9 @@ def recall_aln_size_log(data):
 
     #plt.legend(loc='best', fontsize='xx-small')
     plt.xscale("log")
-    plt.xticks([25, 50, 100, 150, 200, 500, 1000], [25, 50, 100, 150, 200, 500, 1000])
-    plt.xlabel('Alignment size', fontsize=16, weight='bold')
-    plt.ylabel('Recall', fontsize=16, weight='bold')
+    plt.xticks([25, 50, 100, 150, 300, 500, 1000], [25, 50, 100, 150, 300, 500, 1000])
+    plt.xlabel('Alignment size', fontsize=13, weight='bold')
+    plt.ylabel('Recall', fontsize=13, weight='bold')
     plt.ylim(0, 1.1)
     plt.tight_layout()
     plt.savefig(args.output_path + '/size_vs_recall_log.png', dpi=600)
@@ -474,7 +475,7 @@ def recall_aln_size_log(data):
     plt.close()
 
 
-recall_aln_size_log(benchmark_res)
+#recall_aln_size_log(benchmark_res)
 
 
 def recall_aln_size(data):
@@ -498,8 +499,8 @@ def recall_aln_size(data):
         plt.yticks(fontsize=12)
 
     #plt.legend(loc='best', fontsize='xx-small')
-    plt.xlabel('Alignment size', fontsize=16, weight='bold')
-    plt.ylabel('Recall', fontsize=16, weight='bold')
+    plt.xlabel('Alignment size', fontsize=13, weight='bold')
+    plt.ylabel('Recall', fontsize=13, weight='bold')
     plt.ylim(0, 1.1)
     plt.tight_layout()
     plt.savefig(args.output_path + '/size_vs_recall.png', dpi=600)
@@ -507,7 +508,7 @@ def recall_aln_size(data):
     plt.close()
 
 
-recall_aln_size(benchmark_res)
+#recall_aln_size(benchmark_res)
 
 
 def ROC(data):
@@ -559,7 +560,7 @@ def ROC(data):
 
 # precision - number of alignments
 def alignments_precision(data):
-    plt.figure(figsize=(4, 4))
+    plt.figure(figsize=(5, 4))
     data2={}
     for name,df in data.items():
         mapq = []
@@ -594,14 +595,15 @@ def alignments_precision(data):
         plt.xticks(fontsize=12)
         plt.yticks(fontsize=12)
 
-    plt.ylabel('Precision', fontsize=16, weight='bold')
-    plt.xlabel('Mapped alignments - Expected alignments', fontsize=16, weight='bold')
+    plt.ylabel('Precision', fontsize=13, weight='bold')
+    plt.xlabel('Mapped alignments - Expected alignments', fontsize=13, weight='bold')
+    plt.tight_layout()
     #plt.legend(loc='best', fontsize='xx-small')
     plt.savefig(args.output_path + '/expected_alns_precision.png', dpi=600)
     plt.close()
 
 
-alignments_precision(benchmark_res)
+#alignments_precision(benchmark_res)
 
 
 
@@ -644,12 +646,12 @@ def alignments_recall(data):
     plt.ylabel('Recall', fontsize=16, weight='bold')
     plt.xlabel('Mapped alignments - Expected alignments', fontsize=16, weight='bold')
     #plt.legend(loc='best', fontsize='xx-small')
-    plt.figure(figsize=(10, 10))
+    plt.tight_layout()
     plt.savefig(args.output_path + '/expected_alns_recall.png', dpi=600)
     plt.close()
 
 
-alignments_recall(benchmark_res)
+#alignments_recall(benchmark_res)
 
 
 def alignments_f_score(data):
@@ -691,9 +693,74 @@ def alignments_f_score(data):
 
     plt.ylabel('F-score', fontsize=16, weight='bold')
     plt.xlabel('Mapped alignments - Expected', fontsize=16, weight='bold')
+    plt.tight_layout()
     #plt.legend(loc='best', fontsize='xx-small')
     plt.savefig(args.output_path + '/expected_alns_f_score.png', dpi=600)
     plt.close()
 
 
-alignments_f_score(benchmark_res)
+#alignments_f_score(benchmark_res)
+
+
+def mapq_aln_size_log(data):
+    plt.figure(figsize=(5, 4))
+    for name, df in data.items():
+        bin_precision = []
+        bin_id = []
+        s = []
+        for bid, b in df.groupby('bins'):
+            if (b['mapq'].sum()) == 0:
+                continue
+            s.append(len(b)*scale)
+            bin_precision.append(b['mapq'].sum()/len(b))
+            bin_id.append(bid)
+
+        plt.plot(bin_id, bin_precision, label=name, c=colors[name], alpha=0.8)
+        plt.scatter(bin_id, bin_precision, s=s, alpha=0.4, c=colors[name], linewidths=0)
+        plt.xticks(fontsize=12)
+        plt.yticks(fontsize=12)
+
+    #plt.legend(loc='best', fontsize='xx-small')
+    plt.xscale("log")
+    plt.xticks([25, 50, 100, 150, 300, 500, 1000], [25, 50, 100, 150, 300, 500, 1000])
+    plt.xlabel('Alignment size', fontsize=13, weight='bold')
+    plt.ylabel('Mapping quality', fontsize=13, weight='bold')
+    plt.tight_layout()
+    plt.savefig(args.output_path + '/size_vs_mapq_log.png', dpi=600)
+    #plt.show()
+    plt.close()
+
+    handles = [mpl.patches.Patch(color=colors[x], label=x) for x in colors.keys()]
+    plt.legend(handles=handles)
+    plt.gca().set_axis_off()
+    plt.savefig(args.output_path + '/legend.png', dpi=600)
+
+
+mapq_aln_size_log(data)
+
+
+
+def precision_recall_frag(data):
+    plt.figure(figsize=(4, 4))
+    for name, df in data.items():
+        bin_precision = []
+        bin_recall = []
+        bin_id = []
+        s = []
+        for bid, b in df.groupby('bins'):
+            if (b['tp'].sum() + b['fp'].sum()) == 0:
+                continue
+            s.append(len(b)*scale)
+            bin_precision.append(b['tp'].sum() / (b['tp'].sum() + b['fp'].sum()))
+            bin_recall.append(b['tp'].sum() / (b['tp'].sum() + b['fn'].sum()))
+            bin_id.append(bid)
+        plt.plot(bin_recall, bin_precision, alpha=1, label=name, c=colors[name], linewidth=1,
+                 markeredgecolor=colors[name], marker=markers[name], markerfacecolor="None", markersize=2, markeredgewidth=0.5)
+    plt.xlabel('Recall', fontsize=13, weight='bold')
+    plt.ylabel('Precision', fontsize=13, weight='bold')
+    #plt.legend(loc='best', fontsize='xx-small')
+    plt.savefig(args.output_path + '/Precision_Recall.png', dpi=600)
+    plt.close()
+
+
+precision_recall_frag(benchmark_res)

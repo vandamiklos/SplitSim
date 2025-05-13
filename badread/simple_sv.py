@@ -247,7 +247,7 @@ def generate_insertion(args, ref, n_seqs, frag_lengths, valid_chroms):
         seqs = [seq1, seq2, seq3]
         names = [f">insertion_", f"{c}:{pos[0]}-{pos[0]+flen[0]}",
                  f"{c}:{pos[1]}-{pos[1] + flen[1]}",
-                 f"{c}:{pos[0] + flen[0]}-{pos[0] + flen[0] + flen[2]}"]
+                 f"{c}:{pos[0] + flen[0] + 1}-{pos[0] + flen[0] + flen[2]}"]
         final_seq = "".join(seqs)
         final_name = "_".join(names)
         print(final_name)
@@ -283,7 +283,7 @@ def generate_random_insertion(args, ref, n_seqs, frag_lengths, valid_chroms):
 
         seq1 = ref.fetch(c, pos, pos + flen[0]).upper()
         seq2 = DNA(flen[1])
-        seq3 = ref.fetch(c, pos + flen[0], pos + flen[0] + flen[2]).upper()
+        seq3 = ref.fetch(c, pos + flen[0] + 1, pos + flen[0] + flen[2]).upper()
 
         if s == 'reverse':
             seq1 = misc.reverse_complement(seq1)
@@ -292,7 +292,7 @@ def generate_random_insertion(args, ref, n_seqs, frag_lengths, valid_chroms):
         seqs = [seq1, seq2, seq3]
         names = [f">randominsertion_", f"{c}:{pos}-{pos+flen[0]}",
                  f"randomchr:0-0",
-                 f"{c}:{pos + flen[0] + flen[1]}-{pos + flen[0] + flen[1] + flen[2]}"]
+                 f"{c}:{pos + flen[0] + 1}-{pos + flen[0] + flen[2]}"]
         final_seq = "".join(seqs)
         final_name = "_".join(names)
         print(final_name)
@@ -321,7 +321,7 @@ def generate_N_insertion(args, ref, n_seqs, frag_lengths, valid_chroms):
 
         seq1 = ref.fetch(c, pos, pos + flen[0]).upper()
         seq2 = flen[1] * 'N'
-        seq3 = ref.fetch(c, pos + flen[0], pos + flen[0] + flen[2]).upper()
+        seq3 = ref.fetch(c, pos + flen[0] + 1, pos + flen[0] + flen[2]).upper()
 
         if s == 'reverse':
             seq1 = misc.reverse_complement(seq1)
@@ -330,7 +330,7 @@ def generate_N_insertion(args, ref, n_seqs, frag_lengths, valid_chroms):
         seqs = [seq1, seq2, seq3]
         names = [f">ninsertion_", f"{c}:{pos}-{pos+flen[0]}",
                  f"N:0-0",
-                 f"{c}:{pos + flen[0] + flen[1]}-{pos + flen[0] + flen[1] + flen[2]}"]
+                 f"{c}:{pos + flen[0] + 1}-{pos + flen[0] + flen[2]}"]
         final_seq = "".join(seqs)
         final_name = "_".join(names)
         print(final_name)
