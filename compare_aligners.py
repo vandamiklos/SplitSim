@@ -39,16 +39,16 @@ for aligner in args.aligner_name:
 #          'vacmap_r': '#774762FF', 'vacmap_s': '#774762FF'}
 
 # #90728FFF, #B9A0B4FF, #9D983DFF, #CECB76FF, #E15759FF, #FF9888FF, #6B6B6BFF, #BAB2AEFF, #AA8780FF, #DAB6AFFF
-colors = {'bwa_ont': '#665065FF',
-          'minimap2_ont': '#666328FF',
-          'lastalsplit_ont': '#c82426FF',
-          'ngmlr_ont': '#303848FF',
-          'vacmap_s_ont': '#664a45FF',
-          'bwa_pacbio': '#B9A0B4FF',
-          'minimap2_pacbio': '#CECB76FF',
-          'lastalsplit_pacbio': '#FF9888FF',
-          'ngmlr_pacbio': '#5a6884FF',
-          'vacmap_s_pacbio': '#946b63FF'
+colors = {'bwa_ont': '#B53333',
+          'minimap2_ont': '#6A4CDB',
+          'lastalsplit_ont': '#FF7F27',
+          'ngmlr_ont': '#3CB371',
+          'vacmap_s_ont': '#0077B6',
+          'bwa_pacbio': '#F28B82',
+          'minimap2_pacbio': '#d0bdf4',
+          'lastalsplit_pacbio': '#F7DC6F',
+          'ngmlr_pacbio': '#b5e2b4',
+          'vacmap_s_pacbio': '#a9d6e5'
           }
 
 
@@ -117,7 +117,7 @@ def precision_aln_size_log(data):
     plt.savefig(args.output_path + '/legend.png', dpi=600)
 
 
-#precision_aln_size_log(data)
+precision_aln_size_log(data)
 
 
 def precision_mapq(data):
@@ -150,7 +150,7 @@ def precision_mapq(data):
     plt.close()
 
 
-#precision_mapq(data)
+precision_mapq(data)
 
 def addlabels(x,y):
     for i in range(len(x)):
@@ -178,7 +178,7 @@ def mapped_alignments(data):
     plt.close()
 
 
-#mapped_alignments(data)
+mapped_alignments(data)
 
 
 def fragment_length_dist(data):
@@ -195,7 +195,7 @@ def fragment_length_dist(data):
     plt.close()
 
 
-#fragment_length_dist(data)
+fragment_length_dist(data)
 
 
 def BWA_curve(data):
@@ -217,23 +217,26 @@ def BWA_curve(data):
             y.append((fp+tp)/(total))
             x.append(fp/(tp+fp))
 
-        plt.plot(x, y, alpha=1, c=colors[name], label=name, linewidth=1.5, markeredgecolor=colors[name],
-                 marker=markers[name], markerfacecolor="None", markersize=6, markeredgewidth=0.5)
+        plt.plot(x, y, alpha=1, c=colors[name], label=name, linewidth=0.9, markeredgecolor=colors[name],
+                 marker=markers[name], markerfacecolor="None", markersize=5, markeredgewidth=0.5)
         plt.xticks(fontsize=12)
         plt.yticks(fontsize=12)
 
 
     plt.ylabel('mapped/total', fontsize=13, weight='bold')
     plt.xlabel('wrong/mapped', fontsize=13, weight='bold')
-    plt.grid()
+    plt.grid(True, linewidth=0.5)
     plt.locator_params(axis='x', nbins=8)
     plt.tight_layout()
     #plt.legend(loc='best', fontsize='xx-small')
+    plt.ylim(top=1.1)
+    left, right = plt.xlim()
+    plt.xlim(left, 0.5)
     plt.savefig(args.output_path + '/bwamempaper_mapq.png', dpi=600)
     plt.close()
 
 
-#BWA_curve(benchmark_res)
+BWA_curve(benchmark_res)
 
 
 def recall_aln_size_log(data):
@@ -268,7 +271,7 @@ def recall_aln_size_log(data):
     plt.close()
 
 
-#recall_aln_size_log(benchmark_res)
+recall_aln_size_log(benchmark_res)
 
 
 # precision - number of alignments
@@ -317,7 +320,7 @@ def alignments_precision(data):
     plt.close()
 
 
-#(benchmark_res)
+alignments_precision(benchmark_res)
 
 
 
@@ -366,7 +369,7 @@ def alignments_recall(data):
     plt.close()
 
 
-#alignments_recall(benchmark_res)
+alignments_recall(benchmark_res)
 
 
 def alignments_f_score(data):
@@ -415,7 +418,7 @@ def alignments_f_score(data):
     plt.close()
 
 
-#alignments_f_score(benchmark_res)
+alignments_f_score(benchmark_res)
 
 
 def mapq_aln_size_log(data):
@@ -455,37 +458,4 @@ def mapq_aln_size_log(data):
     plt.savefig(args.output_path + '/legend.png', dpi=600)
 
 
-#mapq_aln_size_log(data)
-
-
-
-def precision_recall_frag(data):
-    plt.figure(figsize=(4, 4))
-    for name, df in data.items():
-        bin_precision = []
-        bin_recall = []
-        bin_id = []
-        s = []
-        for bid, b in df.groupby('bins'):
-            if (b['tp'].sum() + b['fp'].sum()) == 0 or (b['tp'].sum() + b['fn'].sum()) == 0:
-                continue
-            if len(b) < 200:
-                continue
-            s.append(len(b)*scale)
-            bin_precision.append(b['tp'].sum() / (b['tp'].sum() + b['fp'].sum()))
-            bin_recall.append(b['tp'].sum() / (b['tp'].sum() + b['fn'].sum()))
-            bin_id.append(bid)
-        plt.plot(bin_recall, bin_precision, alpha=1, label=name, c=colors[name], linewidth=1,
-                 markeredgecolor=colors[name], marker=markers[name], markerfacecolor="None", markersize=2, markeredgewidth=0.5)
-    plt.xlabel('Recall', fontsize=13, weight='bold')
-    plt.ylabel('Precision', fontsize=13, weight='bold')
-    plt.grid()
-    plt.tight_layout()
-    plt.savefig(args.output_path + '/Precision_Recall.png', dpi=600)
-    plt.close()
-
-
-benchmark_res2 = create_bins(benchmark_res, 50, 'aln_size')
-
-
-precision_recall_frag(benchmark_res2)
+mapq_aln_size_log(data)

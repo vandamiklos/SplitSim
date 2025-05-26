@@ -62,9 +62,11 @@ def load_frag_info(pth):
         name = r.__str__().split('\n')[0]
         # print(f"Read name: {name}")
         t = name.replace('__', ' ').split(' ')[1]
-        options = ['alignment', 'insertion', 'deletion', 'translocation', 'ninsertion', 'randominsertion', 'inversion2',
-                 'inversion3', 'duplication']
-        if t in options:
+        tt = t.replace('_', ' ').split(' ')[0]
+        print(f"Type: {tt}")
+        options = ['alignments', 'alignment', 'insertion', 'deletion', 'translocation', 'ninsertion', 'randominsertion',
+                   'inversion2', 'inversion3', 'duplication']
+        if tt in options:
             ie = InsEvent(name)
             ins_events[ie.qname] = ie
             n += len(ie.get_ins_blocks())
