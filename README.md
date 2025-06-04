@@ -1,15 +1,19 @@
-SplitReadSimulator
+SplitSim
 ------------------
 
 This is a fork of BadreadAmplicon. It generates split-reads for the testing of long-read aligners.
 
 ### Usage:
-#### Generate split-reads
+#### Generate complex interchromosmal rearrangements
 ```bash
 splitreadsimulator generate_split_reads --reference /path_to/ref_genome.fa \
                                         --number 100 --mean 10 \
                                         --mean-block-len 100 --std-block-len 100 > /out_path/split_reads.fa
 ```
+#### Generate complex intrachromosmal rearrangements
+
+#### Generate simpler structural variants
+
 
 #### Simulate a sequencing run
 
