@@ -42,13 +42,13 @@ for aligner in args.aligner_name:
 colors = {'bwa_ont': '#B53333',
           'minimap2_ont': '#6A4CDB',
           'lastalsplit_ont': '#FF7F27',
-          'ngmlr_ont': '#3CB371',
-          'vacmap_s_ont': '#0077B6',
+          'ngmlr_ont': '#0077B6',
+          'vacmap_s_ont': '#4d4d4d',
           'bwa_pacbio': '#F28B82',
           'minimap2_pacbio': '#d0bdf4',
           'lastalsplit_pacbio': '#F7DC6F',
-          'ngmlr_pacbio': '#b5e2b4',
-          'vacmap_s_pacbio': '#a9d6e5'
+          'ngmlr_pacbio': '#a9d6e5',
+          'vacmap_s_pacbio': '#cccccc'
           }
 
 
@@ -62,6 +62,18 @@ markers={'bwa_ont': 'o',
           'lastalsplit_pacbio': '+',
           'ngmlr_pacbio': 'p',
           'vacmap_s_pacbio': 's'
+          }
+
+linetypes={'bwa_ont': 'dashed',
+          'minimap2_ont': 'dashed',
+          'lastalsplit_ont': 'dashed',
+          'ngmlr_ont': 'dashed',
+          'vacmap_s_ont': 'dashed',
+          'bwa_pacbio': 'solid',
+          'minimap2_pacbio': 'solid',
+          'lastalsplit_pacbio': 'solid',
+          'ngmlr_pacbio': 'solid',
+          'vacmap_s_pacbio': 'solid'
           }
 
 scale = 0.01
@@ -93,7 +105,7 @@ def precision_aln_size_log(data):
             bin_precision.append(b['tp'].sum() / (b['tp'].sum() + b['fp'].sum()))
             bin_id.append(bid)
 
-        plt.plot(bin_id, bin_precision, label=name, c=colors[name], alpha=0.8)
+        plt.plot(bin_id, bin_precision, label=name, c=colors[name], alpha=0.8, linestyle=linetypes[name])
         plt.scatter(bin_id, bin_precision, s=s, alpha=0.4, c=colors[name], linewidths=0)
         plt.xticks(fontsize=12)
         plt.yticks(fontsize=12)
@@ -133,7 +145,7 @@ def precision_mapq(data):
             bin_precision.append(b['tp'].sum() / (b['tp'].sum() + b['fp'].sum()))
             bin_id.append(bid)
 
-        plt.plot(bin_id, bin_precision, label=name, c=colors[name], alpha=0.8)
+        plt.plot(bin_id, bin_precision, label=name, c=colors[name], alpha=0.8, linestyle=linetypes[name])
         plt.scatter(bin_id, bin_precision, s=s, alpha=0.4, c=colors[name], linewidths=0)
         plt.xticks(fontsize=12)
         plt.yticks(fontsize=12)
@@ -185,7 +197,7 @@ def fragment_length_dist(data):
     plt.figure(figsize=(4, 4))
     plt.figure()
     for name, df in data.items():
-        sns.kdeplot(df['aln_size'], alpha=0.7, label=name, color=colors[name])
+        sns.kdeplot(df['aln_size'], alpha=0.7, label=name, color=colors[name], linestyle=linetypes[name])
     plt.xlabel('fragment length', fontsize=13, weight='bold')
     plt.ylabel('density function', fontsize=13, weight='bold')
     plt.xticks(fontsize=12)
@@ -218,7 +230,7 @@ def BWA_curve(data):
             x.append(fp/(tp+fp))
 
         plt.plot(x, y, alpha=1, c=colors[name], label=name, linewidth=0.9, markeredgecolor=colors[name],
-                 marker=markers[name], markerfacecolor="None", markersize=5, markeredgewidth=0.5)
+                 marker=markers[name], markerfacecolor="None", markersize=5, markeredgewidth=0.5, linestyle=linetypes[name])
         plt.xticks(fontsize=12)
         plt.yticks(fontsize=12)
 
@@ -252,7 +264,7 @@ def recall_aln_size_log(data):
             bin_recall.append(b['tp'].sum() / (b['tp'].sum() + b['fn'].sum()))
             bin_id.append(bid)
 
-        plt.plot(bin_id, bin_recall, label=name, c=colors[name], alpha=1)
+        plt.plot(bin_id, bin_recall, label=name, c=colors[name], alpha=1, linestyle=linetypes[name])
         plt.scatter(bin_id, bin_recall, s=s, alpha=0.4, c=colors[name], linewidths=0)
         plt.xticks(fontsize=12)
         plt.yticks(fontsize=12)
@@ -306,7 +318,7 @@ def alignments_precision(data):
             x.append(b['aln_diff'].iloc[0])
             s.append(len(b)*0.1)
 
-        plt.plot(x, y, alpha=0.8, label=name, c=colors[name])
+        plt.plot(x, y, alpha=0.8, label=name, c=colors[name], linestyle=linetypes[name])
         plt.scatter(x, y, s=s, alpha=0.25, linewidths=0, c=colors[name])
         plt.xticks(fontsize=12)
         plt.yticks(fontsize=12)
@@ -355,7 +367,7 @@ def alignments_recall(data):
             x.append(b['aln_diff'].iloc[0])
             s.append(len(b)*0.1)
 
-        plt.plot(x, y, alpha=0.8, label=name, c=colors[name])
+        plt.plot(x, y, alpha=0.8, label=name, c=colors[name], linestyle=linetypes[name])
         plt.scatter(x, y, s=s, alpha=0.25, linewidths=0, c=colors[name])
         plt.xticks(fontsize=12)
         plt.yticks(fontsize=12)
@@ -404,7 +416,7 @@ def alignments_f_score(data):
             x.append(b['aln_diff'].iloc[0])
             s.append(len(b)*0.1)
 
-        plt.plot(x, y, alpha=0.8, label=name, c=colors[name])
+        plt.plot(x, y, alpha=0.8, label=name, c=colors[name], linestyle=linetypes[name])
         plt.scatter(x, y, s=s, alpha=0.25, linewidths=0, c=colors[name])
         plt.xticks(fontsize=12)
         plt.yticks(fontsize=12)
@@ -434,7 +446,7 @@ def mapq_aln_size_log(data):
             bin_precision.append(b['mapq'].sum()/len(b))
             bin_id.append(bid)
 
-        plt.plot(bin_id, bin_precision, label=name, c=colors[name], alpha=0.8)
+        plt.plot(bin_id, bin_precision, label=name, c=colors[name], alpha=0.8, linestyle=linetypes[name])
         plt.scatter(bin_id, bin_precision, s=s, alpha=0.4, c=colors[name], linewidths=0)
         plt.xticks(fontsize=12)
         plt.yticks(fontsize=12)

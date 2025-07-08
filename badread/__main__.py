@@ -65,13 +65,17 @@ def main(output=sys.stderr):
         from .simple_sv import generate_svs
         generate_svs(args)
 
+    elif args.subparser_name == 'simple_sv2':
+        from .simple_sv2 import generate_svs
+        generate_svs(args)
+
     elif args.subparser_name == 'benchmark_simple':
         from .benchmark_simple import benchmark_simple
         benchmark_simple(args)
 
 
 def parse_args(args):
-    parser = MyParser(description=bold('SplitReadSimulator: a split-read simulator that can imitate many'
+    parser = MyParser(description=bold('SplitSim: a split-read simulator that can imitate many'
                                        'types of read problems of long reads'),
                       formatter_class=MyHelpFormatter, add_help=False)
 
@@ -85,6 +89,7 @@ def parse_args(args):
     benchmark_mappings_subparser(subparsers)
     same_chr_subparser(subparsers)
     simple_sv_subparser(subparsers)
+    simple_sv2_subparser(subparsers)
     benchmark_simple_subparser(subparsers)
 
 
@@ -340,6 +345,37 @@ def simple_sv_subparser(subparsers):
                           help='Block length stdev (gamma distribution), '
                                'default: DEFAULT)')
     sim_args.add_argument('--fix_overlap', type=float, default='0.4', help='Min overlap in duplications')
+
+    other_args = group.add_argument_group('Other')
+    other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
+                            help='Show this help message and exit')
+
+
+def simple_sv2_subparser(subparsers):
+    group = subparsers.add_parser('simple_sv2', description='Generate split-reads that model insertions, deletions, '
+                                                           'translocations, inversions and duplications with longer flanking regions',
+                                  formatter_class=MyHelpFormatter, add_help=False)
+
+    required_args = group.add_argument_group('Required arguments')
+    required_args.add_argument('--reference', type=str, required=True,
+                               help='Reference FASTA file')
+    required_args.add_argument('--number', type=int, required=True,
+                               help='Number of different split-reads to generate')
+
+    sim_args = group.add_argument_group('Options',
+                                        description='Length distribution parameters of the blocks')
+    sim_args.add_argument('--mean-block-len', type=int, default='150',
+                          help='Block length mean (gamma distribution), '
+                               'default: DEFAULT)')
+    sim_args.add_argument('--std-block-len', type=int, default='150',
+                          help='Block length stdev (gamma distribution), '
+                               'default: DEFAULT)')
+    sim_args.add_argument('--mean-read-len', type=int, default='10000',
+                          help='Read length mean (gamma distribution), '
+                               'default: DEFAULT)')
+    sim_args.add_argument('--std-read-len', type=int, default='5000',
+                          help='Read length stdev (gamma distribution), '
+                               'default: DEFAULT)')
 
     other_args = group.add_argument_group('Other')
     other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,

@@ -78,9 +78,9 @@ class BadreadInstall(install):
                             os.path.join(qscore_models_dest_dir, 'pacbio2016.gz'))
 
 
-setup(name='SplitReadSimulator',
+setup(name='SplitSim',
       version=__version__,
-      description='SplitReadSimulator: a split-read simulator for long reads that can mimic various kinds of read '
+      description='SplitSim: a split-read simulator for long reads that can mimic various kinds of read '
                   'problems',
       long_description=readme(),
       long_description_content_type='text/markdown',
@@ -91,7 +91,7 @@ setup(name='SplitReadSimulator',
       packages=['badread'],
       install_requires=['edlib', 'numpy', 'scipy'],
       extras_require={'plot': ['matplotlib']},
-      entry_points={"console_scripts": ['splitreadsimulator = badread.__main__:main']},
+      entry_points={"console_scripts": ['splitsim = badread.__main__:main']},
       include_package_data=True,
       zip_safe=False,
       python_requires='>=3.6',
