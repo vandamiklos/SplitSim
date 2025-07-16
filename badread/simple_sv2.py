@@ -27,7 +27,7 @@ def generate_duplication(args, ref, n_seqs, frag_lengths, valid_chroms, read_len
         while blk < 1:
             flen = frag_lengths.get_fragment_length()
             read_len = read_lengths.get_fragment_length()
-            if flen < 15 or read_len < 15 and flen > read_len:
+            if flen < 15 or read_len < 15 or flen > read_len:
                 continue
             pos_read = random.randint(read_len, ref.get_reference_length(c) - read_len)
             pos_sv = random.randint(1, read_len-flen)
@@ -37,8 +37,7 @@ def generate_duplication(args, ref, n_seqs, frag_lengths, valid_chroms, read_len
         seq_dup = ref.fetch(c, pos_read + pos_sv, pos_read + pos_sv + flen - 1).upper()
         seq_end = ref.fetch(c, pos_read + pos_sv + flen, pos_read + read_len).upper()
 
-        names.append(f"{c}:{pos_read}-{pos_read+pos_sv-1}")
-        names.append(f"{c}:{pos_read+pos_sv}-{pos_read+pos_sv+flen-1}")
+        names.append(f"{c}:{pos_read}-{pos_read+pos_sv+flen-1}")
         names.append(f"{c}:{pos_read+pos_sv}-{pos_read+pos_sv+flen-1}")
         names.append(f"{c}:{pos_read+pos_sv+flen}-{pos_read+read_len}")
 
@@ -69,7 +68,7 @@ def generate_translocation(args, ref, n_seqs, frag_lengths, read_lengths):
             o = random.choice(order)
             read_len = read_lengths.get_fragment_length()
             flen = frag_lengths.get_fragment_length()
-            if flen < 15 or read_len < 15 and flen > read_len:
+            if flen < 15 or read_len < 15 or flen > read_len:
                 continue
             if ref.get_reference_length(c2) < read_len:
                 continue
@@ -110,7 +109,7 @@ def generate_inversion(args, ref, n_seqs, frag_lengths, valid_chroms, read_lengt
         while blk < 1:
             flen = frag_lengths.get_fragment_length()
             read_len = read_lengths.get_fragment_length()
-            if flen < 15 or read_len < 15 and flen > read_len:
+            if flen < 15 or read_len < 15 or flen > read_len:
                 continue
             pos_read = random.randint(1, ref.get_reference_length(c) - read_len)
             pos_inv = random.randint(1, read_len-flen)
@@ -146,12 +145,10 @@ def generate_deletion(args, ref, n_seqs, frag_lengths, valid_chroms, read_length
         while blk < 1:
             flen = frag_lengths.get_fragment_length()
             read_len = read_lengths.get_fragment_length()
-            if flen < 15 or read_len < 15 and flen > read_len:
-                continue
-            if flen > read_len:
+            if flen < 15 or read_len < 15 or flen > read_len:
                 continue
             pos = random.randint(1, ref.get_reference_length(c) - read_len)
-            pos_del = random.randint(1, read_len + flen)
+            pos_del = random.randint(1, read_len)
             blk += 1
 
         seq1 = ref.fetch(c, pos, pos + pos_del).upper()
@@ -181,7 +178,7 @@ def generate_insertion(args, ref, n_seqs, frag_lengths, valid_chroms, read_lengt
         while blk < 1:
             flen = frag_lengths.get_fragment_length()
             read_len = read_lengths.get_fragment_length()
-            if flen < 15 or read_len < 15 and flen > read_len:
+            if flen < 15 or read_len < 15 or flen > read_len:
                 continue
             p1 = random.randint(1, ref.get_reference_length(c) - read_len)
             p2 = random.randint(1, ref.get_reference_length(c_ins) - flen)
@@ -224,7 +221,7 @@ def generate_random_insertion(args, ref, n_seqs, frag_lengths, valid_chroms, rea
         while blk < 1:
             flen = frag_lengths.get_fragment_length()
             read_len = read_lengths.get_fragment_length()
-            if flen < 15 or read_len < 15 and flen > read_len:
+            if flen < 15 or read_len < 15 or flen > read_len:
                 continue
             pos = random.randint(1, ref.get_reference_length(c) - read_len)
             pos_ins = random.randint(1, read_len - flen)
@@ -258,7 +255,7 @@ def generate_n_insertion(args, ref, n_seqs, frag_lengths, valid_chroms, read_len
         while blk < 1:
             flen = frag_lengths.get_fragment_length()
             read_len = read_lengths.get_fragment_length()
-            if flen < 15 and read_len < 15 and flen > read_len:
+            if flen < 15 and read_len < 15 or flen > read_len:
                 continue
             pos = random.randint(1, ref.get_reference_length(c) - read_len)
             pos_ins = random.randint(1, read_len - flen)
