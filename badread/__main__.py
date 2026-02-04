@@ -66,12 +66,8 @@ def main(output=sys.stderr):
         generate_svs(args)
 
     elif args.subparser_name == 'simple_sv2':
-        from .simple_sv2 import generate_svs
-        generate_svs(args)
-
-    elif args.subparser_name == 'benchmark_simple':
-        from .benchmark_simple import benchmark_simple
-        benchmark_simple(args)
+        from .simple_sv_flanking import generate_flanking
+        generate_flanking(args)
 
 
 def parse_args(args):
@@ -90,8 +86,6 @@ def parse_args(args):
     same_chr_subparser(subparsers)
     simple_sv_subparser(subparsers)
     simple_sv2_subparser(subparsers)
-    benchmark_simple_subparser(subparsers)
-
 
     longest_choice_name = max(len(c) for c in subparsers.choices)
     subparsers.help = 'R|'
@@ -409,25 +403,6 @@ def benchmark_mappings_subparser(subparsers):
     required_args.add_argument("--out", help="Output path")
     required_args.add_argument("--prefix", help="Prefix for output files", type=str)
     required_args.add_argument("--include_figures", action="store_true", help="Include figures in the output files")
-
-    other_args = group.add_argument_group('Other')
-    other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
-                            help='Show this help message and exit')
-
-
-def benchmark_simple_subparser(subparsers):
-    group = subparsers.add_parser('benchmark_simple', description='Benchmark mappings from BED file',
-                                  formatter_class=MyHelpFormatter, add_help=False)
-
-    required_args = group.add_argument_group('Required arguments')
-    required_args.add_argument('--query', type=str, required=True,
-                               help='Query mappings table to assess from collect_mapping_info (BED file)')
-    required_args.add_argument('--target', type=str, required=True,
-                               help='Target mappings to assess from generate_split_reads (FASTQ file)')
-    required_args.add_argument("--out", help="Output path")
-    required_args.add_argument("--prefix", help="Prefix for output files", type=str)
-    required_args.add_argument("--include_figures", action="store_true", help="Include figures in the output files")
-    required_args.add_argument("--type", type=str, help="Type of SVs to analyze", nargs='+')
 
     other_args = group.add_argument_group('Other')
     other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,

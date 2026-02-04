@@ -279,7 +279,7 @@ def generate_n_insertion(args, ref, n_seqs, frag_lengths, valid_chroms, read_len
         print(final_seq)
 
 
-def generate_svs(args):
+def generate_flanking(args):
     ref = pysam.FastaFile(args.reference)
 
     print(f"Generating {args.number} SVs", file=sys.stderr)
