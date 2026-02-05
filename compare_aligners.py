@@ -43,12 +43,14 @@ colors = {'bwa_ont': '#B53333',
           'minimap2_ont': '#6A4CDB',
           'lastalsplit_ont': '#FF7F27',
           'ngmlr_ont': '#0077B6',
-          'vacmap_s_ont': '#4d4d4d',
+          'vacmap_ont': '#4d4d4d',
           'bwa_pacbio': '#F28B82',
           'minimap2_pacbio': '#d0bdf4',
           'lastalsplit_pacbio': '#F7DC6F',
           'ngmlr_pacbio': '#a9d6e5',
-          'vacmap_s_pacbio': '#cccccc'
+          'vacmap_pacbio': '#cccccc',
+          'mmbwa_ont': '#4b5320',
+          'mmbwa_pacbio': '#708238'
           }
 
 
@@ -56,24 +58,28 @@ markers={'bwa_ont': 'o',
           'minimap2_ont': 'x',
           'lastalsplit_ont': '+',
           'ngmlr_ont': 'p',
-          'vacmap_s_ont': 's',
+          'vacmap_ont': 's',
           'bwa_pacbio': 'o',
           'minimap2_pacbio': 'x',
           'lastalsplit_pacbio': '+',
           'ngmlr_pacbio': 'p',
-          'vacmap_s_pacbio': 's'
+          'vacmap_pacbio': 's',
+         'mmbwa_ont': '*',
+         'mmbwa_pacbio': '*',
           }
 
 linetypes={'bwa_ont': 'dashed',
           'minimap2_ont': 'dashed',
           'lastalsplit_ont': 'dashed',
           'ngmlr_ont': 'dashed',
-          'vacmap_s_ont': 'dashed',
+          'vacmap_ont': 'dashed',
           'bwa_pacbio': 'solid',
           'minimap2_pacbio': 'solid',
           'lastalsplit_pacbio': 'solid',
           'ngmlr_pacbio': 'solid',
-          'vacmap_s_pacbio': 'solid'
+          'vacmap_pacbio': 'solid',
+           'mmbwa_ont': 'dashed',
+           'mmbwa_pacbio': 'solid'
           }
 
 scale = 0.01

@@ -65,7 +65,7 @@ def main(output=sys.stderr):
         from .simple_sv import generate_svs
         generate_svs(args)
 
-    elif args.subparser_name == 'simple_sv2':
+    elif args.subparser_name == 'simple_sv_flanking':
         from .simple_sv_flanking import generate_flanking
         generate_flanking(args)
 
@@ -85,7 +85,7 @@ def parse_args(args):
     benchmark_mappings_subparser(subparsers)
     same_chr_subparser(subparsers)
     simple_sv_subparser(subparsers)
-    simple_sv2_subparser(subparsers)
+    simple_sv_flanking_subparser(subparsers)
 
     longest_choice_name = max(len(c) for c in subparsers.choices)
     subparsers.help = 'R|'
@@ -345,8 +345,8 @@ def simple_sv_subparser(subparsers):
                             help='Show this help message and exit')
 
 
-def simple_sv2_subparser(subparsers):
-    group = subparsers.add_parser('simple_sv2', description='Generate split-reads that model insertions, deletions, '
+def simple_sv_flanking_subparser(subparsers):
+    group = subparsers.add_parser('simple_sv_flanking', description='Generate split-reads that model insertions, deletions, '
                                                            'translocations, inversions and duplications with longer flanking regions',
                                   formatter_class=MyHelpFormatter, add_help=False)
 

@@ -15,7 +15,7 @@ def read_fasta(args):
     return fasta
 
 
-def generate_duplication(args, ref, n_seqs, frag_lengths, valid_chroms, fix_overlap):
+def generate_duplication(args, ref, n_seqs, frag_lengths, valid_chroms):
     chroms = valid_chroms
     strand = ['forward', 'reverse']
     for n in range(n_seqs):
@@ -40,14 +40,10 @@ def generate_duplication(args, ref, n_seqs, frag_lengths, valid_chroms, fix_over
 
         seq1 = ref.fetch(c, pos, pos + flen[0]).upper()
         names.append(f"{c}:{pos}-{pos + flen[0]}")
-        overlap = random.uniform(fix_overlap, 1)
 
-        if flen[0] > flen[1]:
-            seq2 = ref.fetch(c, pos + flen[0] - int(overlap * flen[1]), pos + flen[0] - int(overlap * flen[1]) + flen[1]).upper()
-            names.append(f"{c}:{pos + flen[0] - int(overlap * flen[1])}-{pos + flen[0] - int(overlap * flen[1]) + flen[1]}")
-        if flen[0] <= flen[1]:
-            seq2 = ref.fetch(c, pos + flen[0] - int(overlap * flen[0]), pos + flen[0] - int(overlap * flen[0]) + flen[1]).upper()
-            names.append(f"{c}:{pos + flen[0] - int(overlap * flen[0])}-{pos + flen[0] - int(overlap * flen[0]) + flen[1]}")
+        seq2 = ref.fetch(c, pos + flen[0] + 1, pos + flen[0] + flen[1]).upper()
+        names.append(f"{c}:{pos + flen[0] + 1}-{pos + flen[0] + flen[1]}")
+
 
         if s == 'reverse':
             seq1 = misc.reverse_complement(seq1)
@@ -353,7 +349,7 @@ def generate_svs(args):
         if 3 * max_len < ref.get_reference_length(c):
             valid_chroms.append(c)
 
-    generate_duplication(args, ref, args.number, frag_lengths, valid_chroms, args.fix_overlap)
+    generate_duplication(args, ref, args.number, frag_lengths, valid_chroms)
     generate_deletion(args, ref, args.number, frag_lengths, valid_chroms)
     generate_random_insertion(args, ref, args.number, frag_lengths, valid_chroms)
     generate_N_insertion(args, ref, args.number, frag_lengths, valid_chroms)
