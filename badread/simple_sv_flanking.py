@@ -4,16 +4,6 @@ from badread import misc, fragment_lengths
 import pysam
 
 
-def read_fasta(args):
-    fasta = {}
-    fin = pysam.FastxFile(args.fasta)
-    for line in fin:
-        fasta[line.name] = line.sequence
-    if len(fasta) == 0:
-        raise ValueError("Empty fasta file")
-    return fasta
-
-
 def generate_duplication(args, ref, n_seqs, frag_lengths, valid_chroms, read_lengths):
     # tandem duplications
     chroms = valid_chroms
@@ -30,7 +20,9 @@ def generate_duplication(args, ref, n_seqs, frag_lengths, valid_chroms, read_len
             if flen < 15 or read_len < 15 or flen > read_len:
                 continue
             pos_read = random.randint(read_len, ref.get_reference_length(c) - read_len)
-            pos_sv = random.randint(1, read_len-flen)
+            if pos_read < 0:
+                continue
+            pos_sv = random.randint(0, read_len-flen)
             blk += 1
 
         seq_start = ref.fetch(c, pos_read, pos_read + pos_sv - 1).upper()
@@ -53,8 +45,8 @@ def generate_duplication(args, ref, n_seqs, frag_lengths, valid_chroms, read_len
         print(final_seq)
 
 
-def generate_translocation(args, ref, n_seqs, frag_lengths, read_lengths):
-    chroms = list(ref.references)
+def generate_translocation(args, ref, n_seqs, frag_lengths, valid_chroms, read_lengths):
+    chroms = valid_chroms
     strand = ['forward', 'reverse']
     order = ['short_first', 'long_first']
     for n in range(n_seqs):
@@ -62,7 +54,7 @@ def generate_translocation(args, ref, n_seqs, frag_lengths, read_lengths):
         blk = 0
         while blk < 1:
             c1 = random.choice(chroms)
-            c2 = random.choice(chroms)
+            c2 = random.choice([x for x in chroms if x != c1])
             s1 = random.choice(strand)
             s2 = random.choice(strand)
             o = random.choice(order)
@@ -72,8 +64,8 @@ def generate_translocation(args, ref, n_seqs, frag_lengths, read_lengths):
                 continue
             if ref.get_reference_length(c2) < read_len:
                 continue
-            pos = random.randint(1, ref.get_reference_length(c1) - flen)
-            pos2 = random.randint(1, ref.get_reference_length(c2) - read_len)
+            pos = random.randint(0, ref.get_reference_length(c1) - flen)
+            pos2 = random.randint(0, ref.get_reference_length(c2) - read_len)
             blk += 1
 
             seq1 = ref.fetch(c1, pos, pos + flen).upper()
@@ -111,12 +103,12 @@ def generate_inversion(args, ref, n_seqs, frag_lengths, valid_chroms, read_lengt
             read_len = read_lengths.get_fragment_length()
             if flen < 15 or read_len < 15 or flen > read_len:
                 continue
-            pos_read = random.randint(1, ref.get_reference_length(c) - read_len)
-            pos_inv = random.randint(1, read_len-flen)
+            pos_read = random.randint(0, ref.get_reference_length(c) - read_len)
+            pos_inv = random.randint(0, read_len-flen)
             blk += 1
 
-        seq1 = ref.fetch(c, pos_read, pos_read + pos_inv - 1).upper()
-        seq2 = ref.fetch(c, pos_read + pos_inv, pos_read + pos_inv + flen - 1).upper()
+        seq1 = ref.fetch(c, pos_read, pos_read + pos_inv).upper()
+        seq2 = ref.fetch(c, pos_read + pos_inv, pos_read + pos_inv + flen).upper()
         seq3 = ref.fetch(c, pos_read + pos_inv + flen, pos_read + read_len).upper()
 
         if s == 'reverse':
@@ -126,8 +118,8 @@ def generate_inversion(args, ref, n_seqs, frag_lengths, valid_chroms, read_lengt
             seq2 = misc.reverse_complement(seq2)
 
         ins_seqs = [seq1, seq2, seq3]
-        names = [f">inversion3_", f"{c}:{pos_read}-{pos_read+pos_inv-1}",
-                 f"{c}:{pos_read+pos_inv}-{pos_read+pos_inv+flen-1}",
+        names = [f">inversion3_", f"{c}:{pos_read}-{pos_read+pos_inv}",
+                 f"{c}:{pos_read+pos_inv}-{pos_read+pos_inv+flen}",
                  f"{c}:{pos_read+pos_inv+flen}-{pos_read+read_len}"]
         final_seq = "".join(ins_seqs)
         final_name = "_".join(names)
@@ -147,8 +139,8 @@ def generate_deletion(args, ref, n_seqs, frag_lengths, valid_chroms, read_length
             read_len = read_lengths.get_fragment_length()
             if flen < 15 or read_len < 15 or flen > read_len:
                 continue
-            pos = random.randint(1, ref.get_reference_length(c) - read_len)
-            pos_del = random.randint(1, read_len)
+            pos = random.randint(0, ref.get_reference_length(c) - read_len - flen)
+            pos_del = random.randint(0, read_len)
             blk += 1
 
         seq1 = ref.fetch(c, pos, pos + pos_del).upper()
@@ -180,13 +172,13 @@ def generate_insertion(args, ref, n_seqs, frag_lengths, valid_chroms, read_lengt
             read_len = read_lengths.get_fragment_length()
             if flen < 15 or read_len < 15 or flen > read_len:
                 continue
-            p1 = random.randint(1, ref.get_reference_length(c) - read_len)
-            p2 = random.randint(1, ref.get_reference_length(c_ins) - flen)
-            pos_ins = random.randint(1, read_len-flen)
+            p1 = random.randint(0, ref.get_reference_length(c) - read_len)
+            p2 = random.randint(0, ref.get_reference_length(c_ins) - flen)
+            pos_ins = random.randint(0, read_len-flen)
             blk += 1
 
         seq1 = ref.fetch(c, p1, p1 + pos_ins - 1).upper()
-        seq2 = ref.fetch(c, p2, p2 + flen).upper()
+        seq2 = ref.fetch(c_ins, p2, p2 + flen).upper()
         seq3 = ref.fetch(c, p1 + pos_ins, p1 + read_len - flen).upper()
 
         if s == 'reverse':
@@ -211,72 +203,72 @@ def dna(length):
     return dna_seq
 
 
-def generate_random_insertion(args, ref, n_seqs, frag_lengths, valid_chroms, read_lengths):
-    chroms = valid_chroms
-    strand = ['forward', 'reverse']
-    for n in range(n_seqs):
-        c = random.choice(chroms)
-        s = random.choice(strand)
-        blk = 0
-        while blk < 1:
-            flen = frag_lengths.get_fragment_length()
-            read_len = read_lengths.get_fragment_length()
-            if flen < 15 or read_len < 15 or flen > read_len:
-                continue
-            pos = random.randint(1, ref.get_reference_length(c) - read_len)
-            pos_ins = random.randint(1, read_len - flen)
-            blk += 1
+    #def generate_random_insertion(args, ref, n_seqs, frag_lengths, valid_chroms, read_lengths):
+    #    chroms = valid_chroms
+    #    strand = ['forward', 'reverse']
+    #    for n in range(n_seqs):
+    #        c = random.choice(chroms)
+    #        s = random.choice(strand)
+    #        blk = 0
+    #        while blk < 1:
+    #            flen = frag_lengths.get_fragment_length()
+    #            read_len = read_lengths.get_fragment_length()
+    #            if flen < 15 or read_len < 15 or flen > read_len:
+    #                continue
+    #           pos = random.randint(1, ref.get_reference_length(c) - read_len)
+    #            pos_ins = random.randint(1, read_len - flen)
+    #            blk += 1
+    #
+    #        seq1 = ref.fetch(c, pos, pos + pos_ins - 1).upper()
+    #        seq2 = dna(flen)
+    #        seq3 = ref.fetch(c, pos+pos_ins, pos + read_len - flen).upper()
+    #
+    #        if s == 'reverse':
+    #            seq1 = misc.reverse_complement(seq1)
+    #        seq3 = misc.reverse_complement(seq3)
+    #
+    #    seqs = [seq1, seq2, seq3]
+    #    names = [f">randominsertion_", f"{c}:{pos}-{pos+pos_ins-1}",
+    #             f"randomchr:0-0",
+    #             f"{c}:{pos+pos_ins}-{pos+read_len-flen}"]
+    #    final_seq = "".join(seqs)
+    #    final_name = "_".join(names)
+    #    print(final_name)
+    #    print(final_seq)
 
-        seq1 = ref.fetch(c, pos, pos + pos_ins - 1).upper()
-        seq2 = dna(flen)
-        seq3 = ref.fetch(c, pos+pos_ins, pos + read_len - flen).upper()
 
-        if s == 'reverse':
-            seq1 = misc.reverse_complement(seq1)
-            seq3 = misc.reverse_complement(seq3)
-
-        seqs = [seq1, seq2, seq3]
-        names = [f">randominsertion_", f"{c}:{pos}-{pos+pos_ins-1}",
-                 f"randomchr:0-0",
-                 f"{c}:{pos+pos_ins}-{pos+read_len-flen}"]
-        final_seq = "".join(seqs)
-        final_name = "_".join(names)
-        print(final_name)
-        print(final_seq)
-
-
-def generate_n_insertion(args, ref, n_seqs, frag_lengths, valid_chroms, read_lengths):
-    chroms = valid_chroms
-    strand = ['forward', 'reverse']
-    for n in range(n_seqs):
-        c = random.choice(chroms)
-        s = random.choice(strand)
-        blk = 0
-        while blk < 1:
-            flen = frag_lengths.get_fragment_length()
-            read_len = read_lengths.get_fragment_length()
-            if flen < 15 and read_len < 15 or flen > read_len:
-                continue
-            pos = random.randint(1, ref.get_reference_length(c) - read_len)
-            pos_ins = random.randint(1, read_len - flen)
-            blk += 1
-
-        seq1 = ref.fetch(c, pos, pos + pos_ins - 1).upper()
-        seq2 = flen * 'N'
-        seq3 = ref.fetch(c, pos + pos_ins, pos + read_len - flen).upper()
-
-        if s == 'reverse':
-            seq1 = misc.reverse_complement(seq1)
-            seq3 = misc.reverse_complement(seq3)
-
-        seqs = [seq1, seq2, seq3]
-        names = [f">ninsertion_", f"{c}:{pos}-{pos+pos_ins-1}",
-                 f"N:0-0",
-                 f"{c}:{pos+pos_ins}-{pos+read_len-flen}"]
-        final_seq = "".join(seqs)
-        final_name = "_".join(names)
-        print(final_name)
-        print(final_seq)
+#def generate_n_insertion(args, ref, n_seqs, frag_lengths, valid_chroms, read_lengths):
+    #    chroms = valid_chroms
+    #    strand = ['forward', 'reverse']
+    #    for n in range(n_seqs):
+    #        c = random.choice(chroms)
+    #        s = random.choice(strand)
+    #        blk = 0
+    #        while blk < 1:
+    #            flen = frag_lengths.get_fragment_length()
+    #            read_len = read_lengths.get_fragment_length()
+    #            if flen < 15 and read_len < 15 or flen > read_len:
+    #                continue
+    #            pos = random.randint(1, ref.get_reference_length(c) - read_len)
+    #            pos_ins = random.randint(1, read_len - flen)
+    #            blk += 1
+    #
+    #        seq1 = ref.fetch(c, pos, pos + pos_ins - 1).upper()
+    #        seq2 = flen * 'N'
+    #        seq3 = ref.fetch(c, pos + pos_ins, pos + read_len - flen).upper()
+    #
+    #        if s == 'reverse':
+    #            seq1 = misc.reverse_complement(seq1)
+    #            seq3 = misc.reverse_complement(seq3)
+    #
+    #        seqs = [seq1, seq2, seq3]
+    #        names = [f">ninsertion_", f"{c}:{pos}-{pos+pos_ins-1}",
+    #                 f"N:0-0",
+    #                 f"{c}:{pos+pos_ins}-{pos+read_len-flen}"]
+    #        final_seq = "".join(seqs)
+    #        final_name = "_".join(names)
+    #        print(final_name)
+#        print(final_seq)
 
 
 def generate_flanking(args):
@@ -294,20 +286,17 @@ def generate_flanking(args):
     for c in chroms:
         if 3 * max_len < ref.get_reference_length(c):
             valid_chroms.append(c)
+    if not valid_chroms:
+        raise ValueError("No chromosomes long enough")
 
     generate_duplication(args, ref, args.number, frag_lengths, valid_chroms, read_lengths)
-    print(f"Generated {args.number} duplications")
     generate_deletion(args, ref, args.number, frag_lengths, valid_chroms, read_lengths)
-    print(f"Generated {args.number} deletions")
-    generate_random_insertion(args, ref, args.number, frag_lengths, valid_chroms, read_lengths)
-    print(f"Generated {args.number} rand ins")
-    generate_n_insertion(args, ref, args.number, frag_lengths, valid_chroms, read_lengths)
-    print(f"Generated {args.number} n ins")
+    #    generate_random_insertion(args, ref, args.number, frag_lengths, valid_chroms, read_lengths)
+    #    print(f"Generated {args.number} rand ins")
+    #    generate_n_insertion(args, ref, args.number, frag_lengths, valid_chroms, read_lengths)
+    #    print(f"Generated {args.number} n ins")
     generate_insertion(args, ref, args.number, frag_lengths, valid_chroms, read_lengths)
-    print(f"Generated {args.number} insertions")
     generate_inversion(args, ref, args.number, frag_lengths, valid_chroms, read_lengths)
-    print(f"Generated {args.number} inversions")
-    generate_translocation(args, ref, args.number, frag_lengths, read_lengths)
-    print(f"Generated {args.number} translocations")
+    generate_translocation(args, ref, args.number, frag_lengths, valid_chroms, read_lengths)
 
     print(f"Done", file=sys.stderr)
