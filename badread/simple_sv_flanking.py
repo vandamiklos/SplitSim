@@ -25,12 +25,12 @@ def generate_duplication(args, ref, n_seqs, frag_lengths, valid_chroms, read_len
             pos_sv = random.randint(0, read_len-flen)
             blk += 1
 
-        seq_start = ref.fetch(c, pos_read, pos_read + pos_sv - 1).upper()
-        seq_dup = ref.fetch(c, pos_read + pos_sv, pos_read + pos_sv + flen - 1).upper()
+        seq_start = ref.fetch(c, pos_read, pos_read + pos_sv).upper()
+        seq_dup = ref.fetch(c, pos_read + pos_sv, pos_read + pos_sv + flen).upper()
         seq_end = ref.fetch(c, pos_read + pos_sv + flen, pos_read + read_len).upper()
 
-        names.append(f"{c}:{pos_read}-{pos_read+pos_sv+flen-1}")
-        names.append(f"{c}:{pos_read+pos_sv}-{pos_read+pos_sv+flen-1}")
+        names.append(f"{c}:{pos_read}-{pos_read+pos_sv+flen}")
+        names.append(f"{c}:{pos_read+pos_sv}-{pos_read+pos_sv+flen}")
         names.append(f"{c}:{pos_read+pos_sv+flen}-{pos_read+read_len}")
 
         if s == 'reverse':
@@ -177,7 +177,7 @@ def generate_insertion(args, ref, n_seqs, frag_lengths, valid_chroms, read_lengt
             pos_ins = random.randint(0, read_len-flen)
             blk += 1
 
-        seq1 = ref.fetch(c, p1, p1 + pos_ins - 1).upper()
+        seq1 = ref.fetch(c, p1, p1 + pos_ins).upper()
         seq2 = ref.fetch(c_ins, p2, p2 + flen).upper()
         seq3 = ref.fetch(c, p1 + pos_ins, p1 + read_len - flen).upper()
 
@@ -187,7 +187,7 @@ def generate_insertion(args, ref, n_seqs, frag_lengths, valid_chroms, read_lengt
             seq3 = misc.reverse_complement(seq3)
 
         seqs = [seq1, seq2, seq3]
-        names = [f">insertion_", f"{c}:{p1}-{p1+pos_ins-1}",
+        names = [f">insertion_", f"{c}:{p1}-{p1+pos_ins}",
                  f"{c}:{p2}-{p2+flen}",
                  f"{c}:{p1+pos_ins}-{p1+read_len-flen}"]
         final_seq = "".join(seqs)

@@ -64,8 +64,8 @@ markers={'bwa_ont': 'o',
           'lastalsplit_pacbio': '+',
           'ngmlr_pacbio': 'p',
           'vacmap_pacbio': 's',
-         'mmbwa_ont': '*',
-         'mmbwa_pacbio': '*',
+          'mmbwa_ont': '*',
+          'mmbwa_pacbio': '*',
           }
 
 linetypes={'bwa_ont': 'dashed',
@@ -78,8 +78,8 @@ linetypes={'bwa_ont': 'dashed',
           'lastalsplit_pacbio': 'solid',
           'ngmlr_pacbio': 'solid',
           'vacmap_pacbio': 'solid',
-           'mmbwa_ont': 'dashed',
-           'mmbwa_pacbio': 'solid'
+          'mmbwa_ont': 'dashed',
+          'mmbwa_pacbio': 'solid'
           }
 
 scale = 0.01

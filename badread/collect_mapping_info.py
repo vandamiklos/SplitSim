@@ -15,6 +15,55 @@ def get_query_pos_from_cigartuples(r):
     return start, end, query_length
 
 
+def split_on_gaps(primary, min_gap=15):
+    # if an alignment has a gap longer than 15 split that alignment
+    fragments = []
+    ref_pos = primary.reference_start
+    read_pos = 0
+
+    frag_start_ref = ref_pos
+    frag_start_read = read_pos
+
+    for cigar, length in primary.cigartuples:
+
+        consumes_ref = cigar in (0, 2, 3, 7, 8)
+        consumes_read = cigar in (0, 1, 4, 7, 8)
+
+        # Large reference gap → breakpoint
+        if cigar in (2, 3) and length > min_gap:
+            # close current fragment (before gap)
+            fragments.append({
+                "ref_start": frag_start_ref,
+                "ref_end": ref_pos,
+                "read_start": frag_start_read,
+                "read_end": read_pos
+            })
+
+            # move reference across gap
+            ref_pos += length
+
+            # start new fragment after gap
+            frag_start_ref = ref_pos
+            frag_start_read = read_pos
+            continue
+
+        # advance coordinates normally
+        if consumes_ref:
+            ref_pos += length
+        if consumes_read:
+            read_pos += length
+
+    # close final fragment
+    fragments.append({
+        "ref_start": frag_start_ref,
+        "ref_end": ref_pos,
+        "read_start": frag_start_read,
+        "read_end": read_pos
+    })
+
+    return fragments
+
+
 def mapping_info(f, outf):
 
     af = pysam.AlignmentFile(f, 'r')
@@ -24,8 +73,6 @@ def mapping_info(f, outf):
             d[a.qname].append(a)
 
     res = []
-    no = 0
-    yes = 0
     for qname, v in d.items():
         flag = [(index, i) for index, i in enumerate(v) if not i.flag & 2304]
         # no primary flag set
@@ -44,53 +91,83 @@ def mapping_info(f, outf):
         pri_index, pri_read = flag[0]
         primary_reverse = bool(pri_read.flag & 16)
         seq = pri_read.get_forward_sequence()
-        n_aligns = len(v)
+        fragments = split_on_gaps(pri_read, min_gap=15)
+        n_aligns = len(v) + len(fragments) - 1
         any_seq = False
 
         temp = []
-        sec = 0
-        sup = 0
+
         for index, a in enumerate(v):
-            if a.is_secondary:
-                sec = 1
-            if a.is_supplementary:
-                sup = 1
+
             qstart, qend, qlen = get_query_pos_from_cigartuples(a)
             align_reverse = bool(a.flag & 16)
+
+            # strand correction relative to primary
             if primary_reverse != align_reverse:
                 start_temp = qlen - qend
                 qend = start_temp + qend - qstart
                 qstart = start_temp
-            pri = index == pri_index
-            if not pri:
-                no += 1
-            else:
-                yes += 1
-                any_seq = len(seq) if seq else 0
 
             chrom = af.get_reference_name(a.rname)
-            start = a.reference_start + 1
-            end = a.reference_end
-            t = pd.Interval(start, end)
+            mapq = a.mapq
+            aln_score = a.get_tag('AS') if a.has_tag('AS') else 0
 
-            rd = {'qname': a.qname,
-                 'n_alignments': n_aligns,
-                 'chrom': chrom,
-                 'rstart': start,
-                 'rend': end,
-                 'strand': '-' if align_reverse else '+',
-                 'qstart': qstart,
-                 'qend': qend,
-                 'qlen': qlen,
-                 'aln_size': qend - qstart,
-                 'mapq': a.mapq,
-                 'alignment_score': (0 if 'AS' not in a.get_tags() else a.get_tag('AS')),
-                 'seq': seq if pri else '',
-                 'is_secondary': sec,
-                 'is_supplementary': sup,
-                 }
+            pri = index == pri_index
 
-            temp.append(rd)
+            # -------------------------------
+            # PRIMARY → replace with fragments if large gap in the alignment
+            # -------------------------------
+            if pri:
+
+                for frag in fragments:
+
+                    frag_qstart = frag["read_start"]
+                    frag_qend = frag["read_end"]
+
+                    # strand correction
+                    if primary_reverse:
+                        start_temp = qlen - frag_qend
+                        frag_qend = start_temp + frag_qend - frag_qstart
+                        frag_qstart = start_temp
+
+                    rd = {
+                        'qname': a.qname,
+                        'chrom': chrom,
+                        'rstart': frag["ref_start"] + 1,
+                        'rend': frag["ref_end"],
+                        'strand': '-' if align_reverse else '+',
+                        'qstart': frag_qstart,
+                        'qend': frag_qend,
+                        'qlen': qlen,
+                        'aln_size': frag_qend - frag_qstart,
+                        'mapq': mapq,
+                        'alignment_score': aln_score,
+                        'seq': seq,  # keep full sequence only once
+                    }
+
+                    temp.append(rd)
+
+            # ---------------------------------
+            # secondary / supplementary
+            # ---------------------------------
+            else:
+
+                rd = {
+                    'qname': a.qname,
+                    'chrom': chrom,
+                    'rstart': a.reference_start + 1,
+                    'rend': a.reference_end,
+                    'strand': '-' if align_reverse else '+',
+                    'qstart': qstart,
+                    'qend': qend,
+                    'qlen': qlen,
+                    'aln_size': qend - qstart,
+                    'mapq': mapq,
+                    'alignment_score': aln_score,
+                    'seq': '',
+                }
+
+                temp.append(rd)
 
         if not any_seq:
             print('missing', qname, [(len(vv.seq), vv.infer_query_length()) if vv.seq else vv.infer_query_length() for vv in v])
@@ -117,8 +194,7 @@ def mapping_info(f, outf):
     df = df.sort_values(['n_alignments', 'qname', 'qstart'], ascending=[False, True, True])
 
     cols = ['chrom', 'rstart', 'rend', 'qname', 'n_alignments', 'aln_size', 'qstart', 'qend', 'strand', 'mapq', 'qlen',
-             'alignment_score', 'short_anchor<50bp', 'seq', 'is_secondary',
-            'is_supplementary']
+             'alignment_score', 'short_anchor<50bp', 'seq']
 
     df = df[cols]
     df.to_csv(f"{outf}.bed", index=False, sep="\t")
