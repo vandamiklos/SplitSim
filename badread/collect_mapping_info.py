@@ -15,8 +15,15 @@ def get_query_pos_from_cigartuples(r):
     return start, end, query_length
 
 
-def split_on_gaps(primary, min_gap=15):
-    # if an alignment has a gap longer than 15 split that alignment
+def split_on_gaps(primary, ref_gap=15, ins_gap=15):
+    """
+        Split an alignment into fragments when:
+          - reference gap (D/2 or N/3) > ref_gap
+          - insertion (I/1) > ins_gap
+
+        Returns a list of dictionaries containing:
+          ref_start, ref_end, read_start, read_end
+        """
     fragments = []
     ref_pos = primary.reference_start
     read_pos = 0
@@ -30,7 +37,7 @@ def split_on_gaps(primary, min_gap=15):
         consumes_read = cigar in (0, 1, 4, 7, 8)
 
         # Large reference gap → breakpoint
-        if cigar in (2, 3) and length > min_gap:
+        if cigar in (2, 3) and length > ref_gap: # 2 DEL, 3 REF_SKIP
             # close current fragment (before gap)
             fragments.append({
                 "ref_start": frag_start_ref,
@@ -45,6 +52,20 @@ def split_on_gaps(primary, min_gap=15):
             # start new fragment after gap
             frag_start_ref = ref_pos
             frag_start_read = read_pos
+            continue
+
+        if cigar == 1 and length > ins_gap:
+            fragments.append({
+                "ref_start": frag_start_ref,
+                "ref_end": ref_pos,
+                "read_start": frag_start_read,
+                "read_end": read_pos
+            })
+
+            read_pos += length
+
+            frag_start_read = read_pos
+            frag_start_ref = ref_pos
             continue
 
         # advance coordinates normally
