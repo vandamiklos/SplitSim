@@ -473,7 +473,6 @@ def find_duplications(ins_events, df_fn, prefix):
 
 def benchmark_mappings(args):
     table = pd.read_csv(args.query, sep='\t')
-    table = table.loc[table['is_secondary'] != 1]
     table = table.drop_duplicates()
     table.reset_index(drop=True, inplace=True)
 

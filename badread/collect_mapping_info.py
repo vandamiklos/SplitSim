@@ -15,7 +15,7 @@ def get_query_pos_from_cigartuples(r):
     return start, end, query_length
 
 
-def split_on_gaps(primary, ref_gap=15, ins_gap=15):
+def split_on_gaps(primary, ref_gap=50, ins_gap=50):
     """
         Split an alignment into fragments when:
           - reference gap (D/2 or N/3) > ref_gap
@@ -112,7 +112,7 @@ def mapping_info(f, outf):
         pri_index, pri_read = flag[0]
         primary_reverse = bool(pri_read.flag & 16)
         seq = pri_read.get_forward_sequence()
-        fragments = split_on_gaps(pri_read, min_gap=15)
+        fragments = split_on_gaps(pri_read, ref_gap=15, ins_gap=15)
         n_aligns = len(v) + len(fragments) - 1
         any_seq = False
 
@@ -156,6 +156,7 @@ def mapping_info(f, outf):
                         'chrom': chrom,
                         'rstart': frag["ref_start"] + 1,
                         'rend': frag["ref_end"],
+                        'n_alignments': n_aligns,
                         'strand': '-' if align_reverse else '+',
                         'qstart': frag_qstart,
                         'qend': frag_qend,
@@ -166,6 +167,7 @@ def mapping_info(f, outf):
                         'seq': seq,  # keep full sequence only once
                     }
 
+                    any_seq = True
                     temp.append(rd)
 
             # ---------------------------------
@@ -178,6 +180,7 @@ def mapping_info(f, outf):
                     'chrom': chrom,
                     'rstart': a.reference_start + 1,
                     'rend': a.reference_end,
+                    'n_alignments': n_aligns,
                     'strand': '-' if align_reverse else '+',
                     'qstart': qstart,
                     'qend': qend,
