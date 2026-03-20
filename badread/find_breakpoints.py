@@ -75,7 +75,7 @@ def find_truth_overlap(trees, chrom, pos, window):
     return min(hits, key=lambda x: abs(x.data - pos)).data
 
 
-def detect_events(read, all_alignments=None, min_event_size=50):
+def detect_events(read, all_alignments=None, min_event_size=100):
     """
     Detect structural variant events from a read.
 
@@ -142,6 +142,32 @@ def detect_events(read, all_alignments=None, min_event_size=50):
 
     return events
 
+
+def build_event_tree(events, window=50):
+    """
+    Build interval trees from detected read events.
+
+    Parameters
+    ----------
+    events : list of tuples
+        Each event should be (read_id, event_type, chrom, pos, mapq)
+    window : int
+        Half-width of the interval around each event.
+
+    Returns
+    -------
+    trees : dict
+        A dictionary {chrom: IntervalTree} storing event positions.
+    """
+    trees = defaultdict(IntervalTree)
+
+    for read_id, event_type, chrom, pos, mapq in events:
+        # Add interval [pos - window, pos + window] to tree
+        trees[chrom].addi(pos - window, pos + window, (read_id, event_type, pos, mapq))
+
+    return trees
+
+
 def main():
     parser = argparse.ArgumentParser()
 
@@ -162,13 +188,20 @@ def main():
 
     bam = pysam.AlignmentFile(args.bam)
 
-    # Collect all read events
-    reads_by_qname = {}
+    reads_by_qname = defaultdict(list)
+    bam = pysam.AlignmentFile(args.bam)
     for read in bam:
-        events = detect_events(read)
-        all_read_events.extend([(read.query_name, *e) for e in events])
-        # For LAST-style split reads, you could pass all alignments here if needed
+        if read.is_unmapped:
+            continue
+        reads_by_qname[read.query_name].append(read)
     bam.close()
+
+    all_read_events = []
+    for read_id, alignments in reads_by_qname.items():
+        # detect_events will handle split events across multiple segments
+        # min_event_size can be set appropriately
+        events = detect_events(alignments[0], all_alignments=alignments, min_event_size=100)
+        all_read_events.extend([(read_id, *e) for e in events])
 
     fp_sites = set()
 
