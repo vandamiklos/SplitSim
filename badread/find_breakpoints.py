@@ -7,11 +7,16 @@ import re
 
 def load_breakpoints_from_fasta(fasta_file):
     """
-    Build interval trees from breakpoint junctions encoded in FASTA headers,
-    excluding the start of the first segment and the end of the last segment.
+    Build interval trees from breakpoint junctions encoded in FASTA headers.
+
+    Only internal junctions are included:
+    - Excludes the first junction (edge of the read)
+    - Excludes the last junction (edge of the read)
     """
-    trees = defaultdict(IntervalTree)
-    truth_sites = defaultdict(set)
+    tree_start = defaultdict(IntervalTree)
+    tree_end = defaultdict(IntervalTree)
+    truth_sites = []
+    truth_ids = set()
 
     pattern = re.compile(r"(chr[^:]+):(\d+)-(\d+)")
 
@@ -27,46 +32,40 @@ def load_breakpoints_from_fasta(fasta_file):
 
             _, coords_part = header.split("__", 1)
 
-            # Extract all segments
+            # Extract segments: [(chrom, start, end), ...]
             segments = pattern.findall(coords_part)
 
-            # Skip reads with only one segment (no junctions)
+            # Need at least 2 segments to have an internal junction
             if len(segments) < 2:
                 continue
 
-            # Build junctions between consecutive segments
-            for i in range(len(segments) - 1):
+            # Iterate over junctions
+            for i in range(0, len(segments) - 1):
                 chrom1, s1, e1 = segments[i]
                 chrom2, s2, e2 = segments[i + 1]
 
-                # Convert to integers
-                pos1 = int(e1)  # end of segment 1
-                pos2 = int(s2)  # start of segment 2
+                pos1 = int(e1)  # end of segment i
+                pos2 = int(s2)  # start of segment i+1
 
-                # Skip the very first segment's start and last segment's end
-                # i > 0 ensures we skip the first segment's end (which would be the start)
-                # i < len(segments) - 2 ensures we skip last segment's start
-                for j, (chrom, pos) in enumerate([(chrom1, pos1), (chrom2, pos2)]):
-                    is_first_segment = i == 0 and j == 0
-                    is_last_segment = i == len(segments) - 2 and j == 1
-                    if is_first_segment or is_last_segment:
-                        continue
+                id = str(chrom1) + ":" + str(pos1) + "-" + str(chrom2) + ":" + str(pos2)
+                truth_ids.add(id)
 
-                    if pos not in truth_sites[chrom]:
-                        trees[chrom].addi(pos, pos + 1, pos)
-                        truth_sites[chrom].add(pos)
+                tree_start[chrom1].addi(pos1, pos1 + 1, id)
+                tree_end[chrom2].addi(pos2, pos2 + 1, id)
 
-    return trees, truth_sites
+                truth_sites.append(((chrom1, pos1), (chrom2, pos2)))
+
+    return tree_start, tree_end, truth_sites, truth_ids
 
 
-def find_truth_overlap(trees, chrom, pos, window):
+def find_truth_overlap(tree, chrom, pos, window):
     """
     Return truth breakpoint if overlap exists
     """
-    if chrom not in trees:
+    if chrom not in tree:
         return []
 
-    hits = trees[chrom].overlap(pos - window, pos + window)
+    hits = tree[chrom].overlap(pos - window, pos + window)
 
     if not hits:
         return []
@@ -74,7 +73,7 @@ def find_truth_overlap(trees, chrom, pos, window):
     return [h.data for h in hits]
 
 
-def detect_cigar_events(read, min_event_size=15):
+def detect_cigar_events(read, min_event_size):
     events = []
 
     if read.is_unmapped or not read.cigartuples:
@@ -101,7 +100,7 @@ def detect_cigar_events(read, min_event_size=15):
     return events
 
 
-def detect_last_events(read, all_alignments, min_event_size=15):
+def detect_last_events(all_alignments, min_event_size):
     """
     Detect split-read events from multiple alignments (LAST --split).
 
@@ -128,27 +127,34 @@ def detect_last_events(read, all_alignments, min_event_size=15):
 
         # Different chromosome → always a breakpoint
         if a1.reference_name != a2.reference_name:
-            events.append(("SPLIT_READ", a2.reference_name, a2.reference_start, a2.mapping_quality))
+            events.append(("SPLIT_READ",
+                           a1.reference_name,
+                           a1.reference_end,
+                           a2.reference_name,
+                           a2.reference_start,
+                           min(a1.mapping_quality, a2.mapping_quality)))
         else:
             # Same chromosome → check gap between end of first and start of second
             gap = a2.reference_start - a1.reference_end
             if gap >= min_event_size:
-                events.append(("SPLIT_READ", a2.reference_name, a2.reference_start, a2.mapping_quality))
+                events.append(("SPLIT_READ",
+                           a1.reference_name,
+                           a1.reference_end,
+                           a2.reference_name,
+                           a2.reference_start,
+                           min(a1.mapping_quality, a2.mapping_quality)))
 
     return events
 
 
 def detect_events(read):
     """
-    Detect structural variant events from a read.
+    Detect structural variant events from the SA tag.
 
     Parameters
     ----------
     read : pysam.AlignedSegment
         The read to analyze.
-
-    min_event_size : int
-        Minimum size of indels/soft clips to count as events.
 
     Returns
     -------
@@ -166,42 +172,15 @@ def detect_events(read):
         for entry in sa_entries:
             if not entry:
                 continue
-            chrom2, pos, strand, cigar, mq, nm = entry.split(",")
-            events.append(("SPLIT_READ", chrom2, int(pos), int(mq)))
+            chrom, pos, strand, cigar, mq, nm = entry.split(",")
+            events.append(("SPLIT_READ",read.reference_name, read.reference_end,
+                           chrom, int(pos), min(read.mapping_quality, int(mq))))
 
     return events
 
 
-def build_event_tree(events, window=25):
-    """
-    Build interval trees from detected read events.
-
-    Parameters
-    ----------
-    events : list of tuples
-        Each event should be (read_id, event_type, chrom, pos, mapq)
-    window : int
-        Half-width of the interval around each event.
-
-    Returns
-    -------
-    trees : dict
-        A dictionary {chrom: IntervalTree} storing event positions.
-    """
-    trees = defaultdict(IntervalTree)
-
-    for read_id, event_type, chrom, pos, mapq in events:
-        # Add interval [pos - window, pos + window] to tree
-        trees[chrom].addi(pos - window, pos + window, (read_id, event_type, pos, mapq))
-
-    return trees
-
-
 def get_primary_alignment(alignments):
-    primaries = [
-        aln for aln in alignments
-        if not aln.is_secondary and not aln.is_supplementary
-    ]
+    primaries = [aln for aln in alignments if not aln.is_secondary and not aln.is_supplementary]
 
     if primaries:
         return primaries[0]
@@ -216,16 +195,12 @@ def main():
     parser.add_argument("-t", "--truth", required=True)
     parser.add_argument("-o", "--output", required=True)
     parser.add_argument("-w", "--window", default=50, type=int)
+    parser.add_argument("-m", "--min-event-size", default=15, type=int)
 
     args = parser.parse_args()
 
     # Load truth breakpoints
-    trees, truth_sites = load_breakpoints_from_fasta(args.truth)
-
-    # Store results
-    results = []
-    matched_truth = set()
-    all_read_events = []
+    tree_start, tree_end, truth_sites, truth_ids = load_breakpoints_from_fasta(args.truth)
 
     reads_by_qname = defaultdict(list)
     bam = pysam.AlignmentFile(args.bam)
@@ -235,62 +210,44 @@ def main():
         reads_by_qname[read.query_name].append(read)
     bam.close()
 
+    predicted_breakpoints = []
+
     for read_id, alignments in reads_by_qname.items():
-        # min_event_size can be set appropriately
+
         events = []
 
-        for aln in alignments:
-            # CIGAR events (per alignment)
-            events.extend(detect_cigar_events(aln, min_event_size=15))
+#        for aln in alignments:
+#            events.extend(detect_cigar_events(aln, args.min_event_size))
 
-        # LAST separate alignments
-        events.extend(detect_last_events(alignments[0], all_alignments=alignments ,min_event_size=15))
+        events.extend(detect_last_events(alignments, args.min_event_size))
 
-        # Split-read events (once per read)
         primary = get_primary_alignment(alignments)
         events.extend(detect_events(primary))
 
-        unique_events = list(set(events))
-        all_read_events.extend((read_id, *e) for e in unique_events)
+        for (event_type, chrom1, pos1, chrom2, pos2, mapq) in events:
+            predicted_breakpoints.append((chrom1, pos1, chrom2, pos2))
 
-    fp_sites = set()
+    matched_truth = set()
+    FP = 0
 
-    # Compare each read event to truth
-    for read_id, event_type, chrom, pos, mapq in all_read_events:
+    for chrom1, pos1, chrom2, pos2 in predicted_breakpoints:
 
-        truth_hits = find_truth_overlap(trees, chrom, pos, args.window)
+        start_hits = find_truth_overlap(tree_start, chrom1, pos1, args.window)
+        end_hits = find_truth_overlap(tree_end, chrom2, pos2, args.window)
 
-        if truth_hits:
-            best_hit = min(truth_hits, key=lambda x: abs(x - pos))
-            results.append((read_id, event_type, chrom, pos, mapq, best_hit, "TP"))
-            matched_truth.add((chrom, best_hit))
+        matched = set(start_hits) & set(end_hits)
+
+        if matched:
+            matched_truth.update(matched)
         else:
-            results.append((read_id, event_type, chrom, pos, mapq, "NA", "FP"))
-            fp_sites.add((chrom, pos))
-
-    # Compute FN from truth sites
-    all_truth = {(chrom, pos) for chrom in truth_sites for pos in truth_sites[chrom]}
-    fn_sites = all_truth - matched_truth
+            FP += 1
 
     TP = len(matched_truth)
-    FP = len(fp_sites)
-    FN = len(fn_sites)
+    FN = len(truth_ids - matched_truth)
 
     precision = TP / (TP + FP) if TP + FP > 0 else 0
     recall = TP / (TP + FN) if TP + FN > 0 else 0
     fscore = 2 * precision * recall / (precision + recall) if precision + recall > 0 else 0
-
-    # --- Write event results ---
-    with open(args.output + ".events.csv", "w") as out:
-        out.write("read_id\tevent_type\tchrom\tpos\tmapq\ttruth_pos\tclass\n")
-        for r in results:
-            out.write("\t".join(map(str, r)) + "\n")
-
-    # --- Write FN list ---
-    with open(args.output + ".fn.csv", "w") as out:
-        out.write("chrom\ttruth_pos\n")
-        for chrom, pos in sorted(fn_sites):
-            out.write(f"{chrom}\t{pos}\n")
 
     # --- Write summary ---
     with open(args.output + ".summary.txt", "w") as out:
