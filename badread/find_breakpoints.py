@@ -100,7 +100,7 @@ def detect_cigar_events(read, min_event_size):
     return events
 
 
-def detect_last_events(all_alignments, min_event_size):
+def detect_split_alignment_events(all_alignments, min_event_size):
     """
     Detect split-read events from multiple alignments (LAST --split).
 
@@ -118,8 +118,8 @@ def detect_last_events(all_alignments, min_event_size):
     """
     events = []
 
-    # Sort alignments by reference start
-    aln_sorted = sorted(all_alignments, key=lambda x: x.reference_start)
+    # Sort alignments by query start
+    aln_sorted = sorted(all_alignments, key=lambda x: x.query_alignment_start)
 
     for i in range(len(aln_sorted) - 1):
         a1 = aln_sorted[i]
@@ -216,13 +216,16 @@ def main():
 
         events = []
 
+         # CIGAR events - will always be FP if both sides of the breakpoint is evaluated
 #        for aln in alignments:
 #            events.extend(detect_cigar_events(aln, args.min_event_size))
 
-        events.extend(detect_last_events(alignments, args.min_event_size))
-
         primary = get_primary_alignment(alignments)
-        events.extend(detect_events(primary))
+        # BWA and Minimap2 will have SA tag, LAST won't - separate them so that FP is not double counted
+        if primary.has_tag("SA"):
+            events.extend(detect_events(primary))
+        else:
+            events.extend(detect_split_alignment_events(alignments, args.min_event_size))
 
         for (event_type, chrom1, pos1, chrom2, pos2, mapq) in events:
             predicted_breakpoints.append((chrom1, pos1, chrom2, pos2))
