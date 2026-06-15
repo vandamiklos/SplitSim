@@ -4,6 +4,8 @@ from intervaltree import IntervalTree
 from collections import defaultdict
 import re
 
+from pip._internal.resolution.resolvelib import candidates
+
 
 def load_breakpoints_from_fasta(fasta_file):
     """
@@ -45,61 +47,51 @@ def load_breakpoints_from_fasta(fasta_file):
                 chrom1, s1, e1 = segments[i]
                 chrom2, s2, e2 = segments[i + 1]
 
-                pos1 = int(e1)  # end of segment i
-                pos2 = int(s2)  # start of segment i+1
-                truth.append((chrom1, pos1, chrom2, pos2))
-#               id = str(chrom1) + ":" + str(pos1) + "-" + str(chrom2) + ":" + str(pos2)
-#               truth_ids.add(id)
-#
-#                tree_start[chrom1].addi(pos1, pos1 + 1, id)
-#                tree_end[chrom2].addi(pos2, pos2 + 1, id)
-#
-#                truth_sites.append(((chrom1, pos1), (chrom2, pos2)))
-#
-#    return tree_start, tree_end, truth_sites, truth_ids
+                truth.append((chrom1, int(e1), chrom2, int(s2)))
+
     return truth
 
 
-def find_truth_overlap(tree, chrom, pos, window):
-    """
-    Return truth breakpoint if overlap exists
-    """
-    if chrom not in tree:
-        return []
+#def find_truth_overlap(tree, chrom, pos, window):
+#    """
+#    Return truth breakpoint if overlap exists
+#    """
+#    if chrom not in tree:
+#        return []
+#
+#    hits = tree[chrom].overlap(pos - window, pos + window)
+#
+#    if not hits:
+#        return []
+#
+#    return [h.data for h in hits]
 
-    hits = tree[chrom].overlap(pos - window, pos + window)
 
-    if not hits:
-        return []
-
-    return [h.data for h in hits]
-
-
-def detect_cigar_events(read, min_event_size):
-    events = []
-
-    if read.is_unmapped or not read.cigartuples:
-        return events
-
-    # --- CIGAR-based events ---
-    ref_pos = read.reference_start
-    chrom = read.reference_name
-    mapq = read.mapping_quality
-
-    for op, length in read.cigartuples:
-        if op == 0:  # match
-            ref_pos += length
-        elif op in (2, 3):  # deletion / skip
-            if length >= min_event_size:
-                events.append(("DELETION_SKIP", chrom, ref_pos, mapq))
-            ref_pos += length
-        elif op == 1:  # insertion
-            if length >= min_event_size:
-                events.append(("INSERTION", chrom, ref_pos, mapq))
-        elif op == 4:  # soft clip
-            if length >= min_event_size:
-                events.append(("SOFT_CLIP", chrom, ref_pos, mapq))
-    return events
+#def detect_cigar_events(read, min_event_size):
+#    events = []
+#
+#    if read.is_unmapped or not read.cigartuples:
+#        return events
+#
+#    # --- CIGAR-based events ---
+#    ref_pos = read.reference_start
+#    chrom = read.reference_name
+#    mapq = read.mapping_quality
+#
+#    for op, length in read.cigartuples:
+#        if op == 0:  # match
+#            ref_pos += length
+#        elif op in (2, 3):  # deletion / skip
+#            if length >= min_event_size:
+#                events.append(("DELETION_SKIP", chrom, ref_pos, mapq))
+#            ref_pos += length
+#        elif op == 1:  # insertion
+#            if length >= min_event_size:
+#                events.append(("INSERTION", chrom, ref_pos, mapq))
+#        elif op == 4:  # soft clip
+#            if length >= min_event_size:
+#                events.append(("SOFT_CLIP", chrom, ref_pos, mapq))
+#    return events
 
 
 def detect_split_alignment_events(all_alignments, min_event_size):
@@ -131,18 +123,14 @@ def detect_split_alignment_events(all_alignments, min_event_size):
 
         # Different chromosome → always a breakpoint
         if a1.reference_name != a2.reference_name:
-            events.append((a1.reference_name,
-                           a1.reference_end,
-                           a2.reference_name,
-                           a2.reference_start))
+            events.append((a1.reference_name, a1.reference_end,
+                           a2.reference_name, a2.reference_start))
         else:
             # Same chromosome → check gap between end of first and start of second
             gap = a2.reference_start - a1.reference_end
             if gap >= min_event_size:
-                events.append((a1.reference_name,
-                               a1.reference_end,
-                               a2.reference_name,
-                               a2.reference_start))
+                events.append((a1.reference_name, a1.reference_end,
+                               a2.reference_name, a2.reference_start))
 
     return events
 
@@ -173,19 +161,20 @@ def detect_sa_events(read):
             continue
 
         chrom, pos, strand, cigar, mq, nm = entry.split(",")
+
         events.append((read.reference_name, read.reference_end,
                         chrom, int(pos)))
 
     return events
 
 
-def get_primary_alignment(alignments):
-    primaries = [aln for aln in alignments if not aln.is_secondary and not aln.is_supplementary]
-
-    if primaries:
-        return primaries[0]
-
-    return max(alignments, key=lambda x: x.mapping_quality)
+#def get_primary_alignment(alignments):
+#    primaries = [aln for aln in alignments if not aln.is_secondary and not aln.is_supplementary]
+#
+#    if primaries:
+#        return primaries[0]
+#
+#    return max(alignments, key=lambda x: x.mapping_quality)
 
 
 def match_bedpe(pred, truth, window):
@@ -205,6 +194,23 @@ def match_bedpe(pred, truth, window):
 
     return fwd or rev
 
+# faster matching is needed
+def build_truth_index(truth, bin_size):
+    index = defaultdict(list)
+
+    for i, (c1, p1, c2, p2) in enumerate(truth):
+        b1 = (c1, p1 // bin_size)
+        b2 = (c2, p2 // bin_size)
+
+        index[b1].append(i)
+        index[b2].append(i)
+
+    return index
+
+
+def get_candidates(truth_index, chrom1, pos1, chrom2, pos2, bin_size):
+    return set(truth_index.get((chrom1, pos1 // bin_size), [])) | set(truth_index.get((chrom2, pos2 // bin_size), []))
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -214,11 +220,13 @@ def main():
     parser.add_argument("-o", "--output", required=True)
     parser.add_argument("-w", "--window", default=50, type=int)
     parser.add_argument("-m", "--min-event-size", default=15, type=int)
+    parser.add_argument("-b", "--bin-size", type=int, default=5000)
 
     args = parser.parse_args()
 
     # Load truth breakpoints
     truth = load_breakpoints_from_fasta(args.truth)
+    truth_index = build_truth_index(truth, args.bin_size)
 #    tree_start, tree_end, truth_sites, truth_ids = load_breakpoints_from_fasta(args.truth)
 
     reads_by_qname = defaultdict(list)
@@ -250,10 +258,14 @@ def main():
     FP = 0
 
     for pred in predicted_breakpoints:
+        c1, p1, c2, p2 = pred
+
+        cand_ids = get_candidates(truth_index, c1, p1, c2, p2, args.bin_size)
+
         found = False
 
-        for i, t in enumerate(truth):
-            if match_bedpe(pred, t, args.window):
+        for i in cand_ids:
+            if match_bedpe(pred, truth[i], args.window):
                 matched_truth.add(i)
                 found = True
                 break
