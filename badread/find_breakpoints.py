@@ -13,10 +13,11 @@ def load_breakpoints_from_fasta(fasta_file):
     - Excludes the first junction (edge of the read)
     - Excludes the last junction (edge of the read)
     """
-    tree_start = defaultdict(IntervalTree)
-    tree_end = defaultdict(IntervalTree)
-    truth_sites = []
-    truth_ids = set()
+#    tree_start = defaultdict(IntervalTree)
+#    tree_end = defaultdict(IntervalTree)
+#    truth_sites = []
+#    truth_ids = set()
+    truth = []
 
     pattern = re.compile(r"(chr[^:]+):(\d+)-(\d+)")
 
@@ -46,16 +47,17 @@ def load_breakpoints_from_fasta(fasta_file):
 
                 pos1 = int(e1)  # end of segment i
                 pos2 = int(s2)  # start of segment i+1
-
-                id = str(chrom1) + ":" + str(pos1) + "-" + str(chrom2) + ":" + str(pos2)
-                truth_ids.add(id)
-
-                tree_start[chrom1].addi(pos1, pos1 + 1, id)
-                tree_end[chrom2].addi(pos2, pos2 + 1, id)
-
-                truth_sites.append(((chrom1, pos1), (chrom2, pos2)))
-
-    return tree_start, tree_end, truth_sites, truth_ids
+                truth.append((chrom1, pos1, chrom2, pos2))
+#               id = str(chrom1) + ":" + str(pos1) + "-" + str(chrom2) + ":" + str(pos2)
+#               truth_ids.add(id)
+#
+#                tree_start[chrom1].addi(pos1, pos1 + 1, id)
+#                tree_end[chrom2].addi(pos2, pos2 + 1, id)
+#
+#                truth_sites.append(((chrom1, pos1), (chrom2, pos2)))
+#
+#    return tree_start, tree_end, truth_sites, truth_ids
+    return truth
 
 
 def find_truth_overlap(tree, chrom, pos, window):
@@ -102,7 +104,7 @@ def detect_cigar_events(read, min_event_size):
 
 def detect_split_alignment_events(all_alignments, min_event_size):
     """
-    Detect split-read events from multiple alignments (LAST --split).
+    Detect split-read events from multiple alignments (LAST --split, NGMLR, VACmap, ...).
 
     Parameters
     ----------
@@ -113,8 +115,7 @@ def detect_split_alignment_events(all_alignments, min_event_size):
 
     Returns
     -------
-    events : list of tuples
-        Each event is (event_type, chrom, pos, mapq)
+    events
     """
     events = []
 
@@ -125,29 +126,28 @@ def detect_split_alignment_events(all_alignments, min_event_size):
         a1 = aln_sorted[i]
         a2 = aln_sorted[i + 1]
 
+        if a1.is_supplementary and a2.is_unmapped:
+            continue
+
         # Different chromosome → always a breakpoint
         if a1.reference_name != a2.reference_name:
-            events.append(("SPLIT_READ",
-                           a1.reference_name,
+            events.append((a1.reference_name,
                            a1.reference_end,
                            a2.reference_name,
-                           a2.reference_start,
-                           min(a1.mapping_quality, a2.mapping_quality)))
+                           a2.reference_start))
         else:
             # Same chromosome → check gap between end of first and start of second
             gap = a2.reference_start - a1.reference_end
             if gap >= min_event_size:
-                events.append(("SPLIT_READ",
-                           a1.reference_name,
-                           a1.reference_end,
-                           a2.reference_name,
-                           a2.reference_start,
-                           min(a1.mapping_quality, a2.mapping_quality)))
+                events.append((a1.reference_name,
+                               a1.reference_end,
+                               a2.reference_name,
+                               a2.reference_start))
 
     return events
 
 
-def detect_events(read):
+def detect_sa_events(read):
     """
     Detect structural variant events from the SA tag.
 
@@ -163,18 +163,18 @@ def detect_events(read):
     """
     events = []
 
-    if read.is_unmapped or not read.cigartuples:
+    if not read.has_tag("SA"):
         return events
 
-        # --- Split-read events via SA tag (BWA/Minimap2) ---
-    if read.has_tag("SA"):
-        sa_entries = read.get_tag("SA").split(";")
-        for entry in sa_entries:
-            if not entry:
-                continue
-            chrom, pos, strand, cigar, mq, nm = entry.split(",")
-            events.append(("SPLIT_READ",read.reference_name, read.reference_end,
-                           chrom, int(pos), min(read.mapping_quality, int(mq))))
+    # --- Split-read events via SA tag (BWA/Minimap2) ---
+    sa_entries = read.get_tag("SA").split(";")
+    for entry in sa_entries:
+        if not entry:
+            continue
+
+        chrom, pos, strand, cigar, mq, nm = entry.split(",")
+        events.append((read.reference_name, read.reference_end,
+                        chrom, int(pos)))
 
     return events
 
@@ -186,6 +186,24 @@ def get_primary_alignment(alignments):
         return primaries[0]
 
     return max(alignments, key=lambda x: x.mapping_quality)
+
+
+def match_bedpe(pred, truth, window):
+    """
+    Bidirectional tolerant matching
+    """
+    p1c, p1, p2c, p2 = pred
+    t1c, t1, t2c, t2 = truth
+
+    # orientation forward
+    fwd = (p1c == t1c) and (abs(p1 - t1) <= window) and \
+         (p2c == t2c) and (abs(p2 - t2) <= window)
+
+    # orientation reverse
+    rev = (p1c == t2c) and (abs(p1 - t2) <= window) and \
+         (p2c == t1c) and (abs(p2 - t1) <= window)
+
+    return fwd or rev
 
 
 def main():
@@ -200,7 +218,8 @@ def main():
     args = parser.parse_args()
 
     # Load truth breakpoints
-    tree_start, tree_end, truth_sites, truth_ids = load_breakpoints_from_fasta(args.truth)
+    truth = load_breakpoints_from_fasta(args.truth)
+#    tree_start, tree_end, truth_sites, truth_ids = load_breakpoints_from_fasta(args.truth)
 
     reads_by_qname = defaultdict(list)
     bam = pysam.AlignmentFile(args.bam)
@@ -214,39 +233,35 @@ def main():
 
     for read_id, alignments in reads_by_qname.items():
 
-        events = []
-
          # CIGAR events - will always be FP if both sides of the breakpoint is evaluated
-#        for aln in alignments:
-#            events.extend(detect_cigar_events(aln, args.min_event_size))
 
-        primary = get_primary_alignment(alignments)
-        # BWA and Minimap2 will have SA tag, LAST won't - separate them so that FP is not double counted
-        if primary.has_tag("SA"):
-            events.extend(detect_events(primary))
-        else:
-            events.extend(detect_split_alignment_events(alignments, args.min_event_size))
+        predicted_breakpoints.extend(detect_split_alignment_events(alignments, args.min_event_size))
 
-        for (event_type, chrom1, pos1, chrom2, pos2, mapq) in events:
-            predicted_breakpoints.append((chrom1, pos1, chrom2, pos2))
+        primary = None
+        for a in alignments:
+            if not a.is_secondary and not a.is_supplementary:
+                primary = a
+                break
+        if primary:
+            predicted_breakpoints.extend(detect_sa_events(primary))
 
     matched_truth = set()
+    TP = 0
     FP = 0
 
-    for chrom1, pos1, chrom2, pos2 in predicted_breakpoints:
+    for pred in predicted_breakpoints:
+        found = False
 
-        start_hits = find_truth_overlap(tree_start, chrom1, pos1, args.window)
-        end_hits = find_truth_overlap(tree_end, chrom2, pos2, args.window)
-
-        matched = set(start_hits) & set(end_hits)
-
-        if matched:
-            matched_truth.update(matched)
+        for i, t in enumerate(truth):
+            if match_bedpe(pred, t, args.window):
+                matched_truth.add(i)
+                found = True
+                break
+        if found:
+            TP += 1
         else:
             FP += 1
-
-    TP = len(matched_truth)
-    FN = len(truth_ids - matched_truth)
+    FN = len(truth) - len(matched_truth)
 
     precision = TP / (TP + FP) if TP + FP > 0 else 0
     recall = TP / (TP + FN) if TP + FN > 0 else 0
