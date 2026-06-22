@@ -16,6 +16,7 @@ def load_breakpoints_from_fasta(fasta_file):
     tree_start = defaultdict(IntervalTree)
     tree_end = defaultdict(IntervalTree)
     truth_sites = []
+
     truth_ids = set()
 
     pattern = re.compile(r"(chr[^:]+):(\d+)-(\d+)")
@@ -85,18 +86,21 @@ def detect_cigar_events(read, min_event_size):
     mapq = read.mapping_quality
 
     for op, length in read.cigartuples:
-        if op == 0:  # match
+        if op in (0, 7, 8):  # match, mismatch: consumes query and reference
             ref_pos += length
-        elif op in (2, 3):  # deletion / skip
+        elif op in (2, 3):  # deletion / skip: only consumes reference
             if length >= min_event_size:
-                events.append(("DELETION_SKIP", chrom, ref_pos, mapq))
+                events.append(("DELETION_SKIP_START", chrom, ref_pos, mapq))
+                events.append(("DELETION_SKIP_END", chrom, ref_pos + length, mapq))
             ref_pos += length
-        elif op == 1:  # insertion
+        elif op == 1:  # insertion: only consumes query
             if length >= min_event_size:
-                events.append(("INSERTION", chrom, ref_pos, mapq))
-        elif op == 4:  # soft clip
+                events.append(("INSERTION_START", chrom, ref_pos, mapq))
+                events.append(("INSERTION_END", chrom, ref_pos + length, mapq))
+        elif op == 4:  # soft clip: consumes query
             if length >= min_event_size:
-                events.append(("SOFT_CLIP", chrom, ref_pos, mapq))
+                events.append(("SOFT_CLIP_START", chrom, ref_pos, mapq))
+                events.append(("SOFT_CLIP_END", chrom, ref_pos + length, mapq))
     return events
 
 
@@ -123,28 +127,39 @@ def detect_split_alignment_events(all_alignments, min_event_size):
 
     for i in range(len(aln_sorted) - 1):
         a1 = aln_sorted[i]
-        a2 = aln_sorted[i + 1]
 
-        # Different chromosome → always a breakpoint
-        if a1.reference_name != a2.reference_name:
-            events.append(("SPLIT_READ",
-                           a1.reference_name,
-                           a1.reference_end,
-                           a2.reference_name,
-                           a2.reference_start,
-                           min(a1.mapping_quality, a2.mapping_quality)))
-        else:
-            # Same chromosome → check gap between end of first and start of second
-            gap = a2.reference_start - a1.reference_end
-            if gap >= min_event_size:
-                events.append(("SPLIT_READ",
-                           a1.reference_name,
-                           a1.reference_end,
-                           a2.reference_name,
-                           a2.reference_start,
-                           min(a1.mapping_quality, a2.mapping_quality)))
+        bp1 = a1.reference_end if a1.is_reverse else a1.reference_start
+        bp2 = a1.reference_start if a1.is_reverse else a1.reference_end
+
+        events.append(("SPLIT_READ_START",
+                        a1.reference_name,
+                        bp1,
+                        a1.mapping_quality))
+        events.append(("SPLIT_READ_END",
+                       a1.reference_name,
+                       bp2,
+                       a1.mapping_quality))
 
     return events
+
+
+import re
+
+def query_length_from_cigar(cigar):
+    qlen = 0
+    for n, op in re.findall(r'(\d+)([MIDNSHP=X])', cigar):
+        n = int(n)
+        if op in ('M', 'I', 'S', '=', 'X'):
+            qlen += n
+    return qlen
+
+
+def ref_length_from_cigar(cigar):
+    length = 0
+    for n, op in re.findall(r'(\d+)([MIDNSHP=X])', cigar):
+        if op in ('M', 'D', 'N', '=', 'X'):
+            length += int(n)
+    return length
 
 
 def detect_events(read):
@@ -159,7 +174,7 @@ def detect_events(read):
     Returns
     -------
     events : list of tuples
-        Each event is (event_type, chrom, pos, mapq)
+        Each event is (event_type, chrom1, pos1, chrom2, pos2)
     """
     events = []
 
@@ -173,8 +188,18 @@ def detect_events(read):
             if not entry:
                 continue
             chrom, pos, strand, cigar, mq, nm = entry.split(",")
-            events.append(("SPLIT_READ",read.reference_name, read.reference_end,
-                           chrom, int(pos), min(read.mapping_quality, int(mq))))
+            pos = int(pos)
+            ref_len = ref_length_from_cigar(cigar)
+
+            if strand == "-":
+                sa_start = pos + ref_len - 1
+                sa_end = pos
+            else:
+                sa_start = pos
+                sa_end = pos + ref_len - 1
+
+            events.append(("SPLIT_READ", chrom, sa_end,
+                           chrom, sa_start, min(read.mapping_quality, int(mq))))
 
     return events
 
@@ -193,9 +218,9 @@ def main():
 
     parser.add_argument("-b", "--bam", required=True)
     parser.add_argument("-t", "--truth", required=True)
-    parser.add_argument("-o", "--output", required=True)
+    parser.add_argument("-o", "--output", required=False)
     parser.add_argument("-w", "--window", default=50, type=int)
-    parser.add_argument("-m", "--min-event-size", default=15, type=int)
+    parser.add_argument("-m", "--min-event-size", default=50, type=int)
 
     args = parser.parse_args()
 
@@ -205,64 +230,88 @@ def main():
     reads_by_qname = defaultdict(list)
     bam = pysam.AlignmentFile(args.bam)
     for read in bam:
-        if read.is_unmapped:
+        if read.is_unmapped or read.is_secondary:
             continue
         reads_by_qname[read.query_name].append(read)
     bam.close()
 
-    predicted_breakpoints = []
+
+    predicted_start = []
+    predicted_end = []
+    predicted_CIGAR = []
 
     for read_id, alignments in reads_by_qname.items():
 
         events = []
 
          # CIGAR events - will always be FP if both sides of the breakpoint is evaluated
-#        for aln in alignments:
-#            events.extend(detect_cigar_events(aln, args.min_event_size))
+        for aln in alignments:
+            predicted_CIGAR.extend(detect_cigar_events(aln, args.min_event_size))
 
-        primary = get_primary_alignment(alignments)
+#        primary = get_primary_alignment(alignments)
         # BWA and Minimap2 will have SA tag, LAST won't - separate them so that FP is not double counted
-        if primary.has_tag("SA"):
-            events.extend(detect_events(primary))
-        else:
-            events.extend(detect_split_alignment_events(alignments, args.min_event_size))
+#        if primary.has_tag("SA"):
+#            events.extend(detect_events(primary))
+#        else:
+        events.extend(detect_split_alignment_events(alignments, args.min_event_size))
 
-        for (event_type, chrom1, pos1, chrom2, pos2, mapq) in events:
-            predicted_breakpoints.append((chrom1, pos1, chrom2, pos2))
+        for (event_type, chrom, pos, mapq) in events:
+            if event_type == "SPLIT_READ_START":
+                predicted_start.append((chrom, pos))
+            if event_type == "SPLIT_READ_END":
+                predicted_end.append((chrom, pos))
 
+    # breakpoints predicted from split-reads
     matched_truth = set()
-    FP = 0
 
-    for chrom1, pos1, chrom2, pos2 in predicted_breakpoints:
+    start = set()
+    end = set()
+    for chrom, pos in predicted_start:
+        start_hits = find_truth_overlap(tree_start, chrom, pos, args.window)
+        for x in start_hits:
+            start.add(x)
 
-        start_hits = find_truth_overlap(tree_start, chrom1, pos1, args.window)
-        end_hits = find_truth_overlap(tree_end, chrom2, pos2, args.window)
 
-        matched = set(start_hits) & set(end_hits)
+    for chrom, pos in predicted_end:
+        end_hits = find_truth_overlap(tree_end, chrom, pos, args.window)
+        for x in end_hits:
+            end.add(x)
 
-        if matched:
-            matched_truth.update(matched)
-        else:
-            FP += 1
+    matched = start & end
+    FP_split = len(start) + len(end) - 2 * len(matched)
 
-    TP = len(matched_truth)
-    FN = len(truth_ids - matched_truth)
+    TP_split = len(matched)
 
-    precision = TP / (TP + FP) if TP + FP > 0 else 0
-    recall = TP / (TP + FN) if TP + FN > 0 else 0
-    fscore = 2 * precision * recall / (precision + recall) if precision + recall > 0 else 0
+    CIGAR = set()
+    FP_CIGAR = 0
+    # CIGAR-based info
+    for event_type, chrom, pos, mapq in predicted_CIGAR:
+
+        start_hits = find_truth_overlap(tree_start, chrom, pos, args.window)
+        end_hits = find_truth_overlap(tree_end, chrom, pos, args.window)
+
+        if start_hits:
+            CIGAR.update(start_hits)
+        if end_hits:
+            CIGAR.update(end_hits)
+        if not end_hits and not start_hits:
+            FP_CIGAR += 1
+
+#    precision = TP / (TP + FP) if TP + FP > 0 else 0
+#    recall = TP / (TP + FN) if TP + FN > 0 else 0
+#    fscore = 2 * precision * recall / (precision + recall) if precision + recall > 0 else 0
 
     # --- Write summary ---
-    with open(args.output + ".summary.txt", "w") as out:
-        out.write(f"TP\tFP\tFN\tPrecision\tRecall\tF-score\n{TP}\t{FP}\t{FN}\t{precision:.4f}\t{recall:.4f}\t{fscore:.4f}")
+#    with open(args.output + ".summary.txt", "w") as out:
+#        out.write(f"TP_split\tFP_split\tn_junctions\tTP_CIGAR\tFP_CIGAR\tn_CIGAR_events\n{TP_split}\t{FP_split}\t{len(truth_ids)}\t{len(CIGAR)}\t{FP_CIGAR}\t{len(predicted_CIGAR)}")
 
     print("Finished")
-    print(f"TP: {TP}")
-    print(f"FP: {FP}")
-    print(f"FN: {FN}")
-    print(f"Precision: {precision:.4f}")
-    print(f"Recall: {recall:.4f}")
-    print(f"F-score: {fscore:.4f}")
+    print(f"TP split-read: {TP_split}, TP from CIGAR: {len(CIGAR)}")
+    print(f"FP split-read: {FP_split}, FP from CIGAR: {FP_CIGAR}")
+    print(f"Number of junctions: {len(truth_ids)}, Number of CIGARs: {len(predicted_CIGAR)}")
+#    print(f"Precision: {precision:.4f}")
+#    print(f"Recall: {recall:.4f}")
+#    print(f"F-score: {fscore:.4f}")
 
 
 if __name__ == "__main__":
