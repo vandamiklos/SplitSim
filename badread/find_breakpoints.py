@@ -16,9 +16,10 @@ def load_breakpoints_from_fasta(fasta_file):
     """
     tree_start = defaultdict(IntervalTree)
     tree_end = defaultdict(IntervalTree)
+    tree_start2 = defaultdict(IntervalTree)
+    tree_end2 = defaultdict(IntervalTree)
     truth_sites = []
-
-    truth_ids = set()
+    truth_sites2 = []
 
     pattern = re.compile(r"(chr[^:]+):(\d+)-(\d+)")
 
@@ -50,14 +51,13 @@ def load_breakpoints_from_fasta(fasta_file):
                 pos2 = int(s2)  # start of segment i+1
 
                 id = str(chrom1) + ":" + str(pos1) + "-" + str(chrom2) + ":" + str(pos2)
-                truth_ids.add(id)
 
                 tree_start[chrom1].addi(pos1, pos1 + 1, id)
                 tree_end[chrom2].addi(pos2, pos2 + 1, id)
 
                 truth_sites.append(((chrom1, pos1), (chrom2, pos2)))
 
-    return tree_start, tree_end, truth_sites, truth_ids
+    return tree_start, tree_end, truth_sites
 
 
 def find_truth_overlap(tree, chrom, pos, window):
@@ -65,12 +65,12 @@ def find_truth_overlap(tree, chrom, pos, window):
     Return truth breakpoint if overlap exists
     """
     if chrom not in tree:
-        return []
+        return None
 
     hits = tree[chrom].overlap(pos - window, pos + window)
 
     if not hits:
-        return []
+        return None
 
     return [h.data for h in hits]
 
@@ -144,20 +144,31 @@ def detect_split_alignment_events(all_alignments, min_event_size):
     return events
 
 
+
+def tree_search(predicted, tree, window):
+    s = set()
+    for chrom, pos in predicted:
+        hits = find_truth_overlap(tree, chrom, pos, window)
+        if hits is not None:
+            for x in hits:
+                s.add(x)
+    return s
+
+
 def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("-b", "--bam", required=True)
     parser.add_argument("-t", "--truth", required=True)
-    parser.add_argument("-o", "--output", required=False)
-    parser.add_argument("-n", "--name", required=False)
+    parser.add_argument("-o", "--output", required=True)
+    parser.add_argument("-n", "--name", required=True)
     parser.add_argument("-w", "--window", default=50, type=int)
     parser.add_argument("-m", "--min-event-size", default=50, type=int)
 
     args = parser.parse_args()
 
     # Load truth breakpoints
-    tree_start, tree_end, truth_sites, truth_ids = load_breakpoints_from_fasta(args.truth)
+    tree_start, tree_end, truth_sites = load_breakpoints_from_fasta(args.truth)
 
     reads_by_qname = defaultdict(list)
     bam = pysam.AlignmentFile(args.bam)
@@ -168,59 +179,29 @@ def main():
     bam.close()
 
 
-    predicted_start = []
-    predicted_end = []
-    predicted_cigar = []
+    predicted = []
 
     for read_id, alignments in reads_by_qname.items():
 
         events = []
 
         for aln in alignments:
-            predicted_cigar.extend(detect_cigar_events(aln, args.min_event_size))
+            events.extend(detect_cigar_events(aln, args.min_event_size))
 
         events.extend(detect_split_alignment_events(alignments, args.min_event_size))
 
         for (event_type, chrom, pos, mapq) in events:
-            if event_type == "SPLIT_READ_START":
-                predicted_start.append((chrom, pos))
-            if event_type == "SPLIT_READ_END":
-                predicted_end.append((chrom, pos))
+            predicted.append((chrom, pos))
+
 
     # breakpoints predicted from split-reads
-    start = set()
-    end = set()
-    for chrom, pos in predicted_start:
-        start_hits = find_truth_overlap(tree_start, chrom, pos, args.window)
-        for x in start_hits:
-            start.add(x)
+    left = tree_search(predicted, tree_start, args.window)
+    right = tree_search(predicted, tree_end, args.window)
 
-    for chrom, pos in predicted_end:
-        end_hits = find_truth_overlap(tree_end, chrom, pos, args.window)
-        for x in end_hits:
-            end.add(x)
-
-    matched = start & end
-    fp_split = len(start) + len(end) - 2 * len(matched)
-
-    tp_split = len(matched)
-
-    cigar = set()
-    fp_cigar = 0
-    # CIGAR-based info
-    for event_type, chrom, pos, mapq in predicted_cigar:
-
-        start_hits = find_truth_overlap(tree_start, chrom, pos, args.window)
-        end_hits = find_truth_overlap(tree_end, chrom, pos, args.window)
-
-        if start_hits:
-            for x in start_hits:
-                cigar.add(x)
-        if end_hits:
-            for x in end_hits:
-                cigar.add(x)
-        if not end_hits and not start_hits:
-            fp_cigar += 1
+    # both sides of the break match
+    matched = left & right
+    # one side of the break matches only
+    partly_matched = left ^ right
 
 #    precision = TP / (TP + FP) if TP + FP > 0 else 0
 #    recall = TP / (TP + FN) if TP + FN > 0 else 0
@@ -228,22 +209,23 @@ def main():
 
     # --- Write summary ---
     with open(args.output + ".summary.txt", "w") as out:
-        out.write(f"TP_split\tFP_split\tn_junctions\tTP_CIGAR\tFP_CIGAR\tn_CIGAR_events\n{tp_split}\t{fp_split}\t{len(truth_ids)}\t{len(cigar)}\t{fp_cigar}\t{len(predicted_cigar)}")
+        out.write(f"tp\ttp_partial\tn_junctions\tn_events\n{len(matched)}\t{len(partly_matched)}\t{len(truth_sites)}\t{len(predicted)}")
 
     print("Finished")
-    print(f"TP split-read: {tp_split}, TP from CIGAR: {len(cigar)}")
-    print(f"FP split-read: {fp_split}, FP from CIGAR: {fp_cigar}")
-    print(f"Number of junctions: {len(truth_ids)}, Number of CIGARs: {len(predicted_cigar)}")
+    print(f"TP: {len(matched)}, TP partial: {len(partly_matched)}")
+    print(f"Number of junctions: {len(truth_sites)}, Number of predicted events: {len(predicted)}")
 #    print(f"Precision: {precision:.4f}")
 #    print(f"Recall: {recall:.4f}")
 #    print(f"F-score: {fscore:.4f}")
 
     path = "/home/vanda/Documents/simulated_split_reads/50bp_gaps/summary_all.txt"
-    file_exists = os.path.exists(path)
+    write_header = not os.path.exists(path)
+
     with open(path, "a") as out:
-        if not file_exists:
-            out.write(f"name\tTP_split\tFP_split\tn_junctions\tTP_CIGAR\tFP_CIGAR\tn_CIGAR_events\n")
-        out.write(f"{args.name}\t{tp_split}\t{fp_split}\t{len(truth_ids)}\t{len(cigar)}\t{fp_cigar}\t{len(predicted_cigar)}\n")
+        if write_header:
+            out.write(f"name\ttp\ttp_partial\tn_junctions\tn_events\n")
+
+        out.write(f"{args.name}\t{len(matched)}\t{len(partly_matched)}\t{len(truth_sites)}\t{len(predicted)}\n")
 
 
 if __name__ == "__main__":
